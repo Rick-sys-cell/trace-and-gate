@@ -2,7 +2,8 @@
 
 **Project:** Trace and Gate: Provenance Tracking and Policy Checks against Indirect Prompt Injection in Email Agents
 **Team:** Rui Zhekai · Khadijah Fathima
-**Last updated:** Wed 14 Oct 2026 (Week 9): interim deliverables finalised (report, deck v3, notes, Q&A pack); folder reorganised
+**Last updated:** Sat 24 Oct 2026 (Week 10): public repo, defenses frozen (`defenses-frozen-v1`), suite v3 dev run done, held-out/AgentDojo/demo tooling ready
+**Repo:** https://github.com/Rick-sys-cell/trace-and-gate (public; course deliverable folders are git-ignored until after grading)
 
 ## Folder layout (14 Oct)
 
@@ -64,13 +65,15 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 ## Week 10 (19 – 25 Oct): full experiments
 | # | Item | Owner | Status |
 |---|---|---|---|
-| 10.0 | D1 header-label fix: done as D1h (8 Oct, rerun 0 lost, 34/34 blocked). Still to do: freeze all defenses, then run D1h+D2 (never run yet; H2 depends on it) | Rui | ◐ |
-| 10.0b | Benchmark fixes (8 Oct): exposure/attempt diagnostics in every run ☑; LLMail requests name the attack email (suite v2) ☑, which fixed "summarise and send" exposure (20/20) but not "read and answer" (2/20); multi-turn redesign ☐ | Rui (Claude) | ◐ |
+| 10.0 | D1h adopted; `d1hd2` = D2 + D1h added (`d1d2` kept for the pilot). **Defenses frozen 24 Oct: tag `defenses-frozen-v1` (869e106)**, incl. the AgentDojo ports | Rui (Claude) | ☑ |
+| 10.0b | Benchmark fixes (8 Oct): exposure/attempt diagnostics in every run ☑; LLMail requests name the attack email (suite v2) ☑, which fixed "summarise and send" exposure (20/20) but not "read and answer" (2/20); multi-turn redesign ☑ (24 Oct, suite v3: split payload over two emails/turns) | Rui (Claude) | ☑ |
 | 10.0c | Rerun on suite v2, run 20261008-103942 (B0, D1, D1h, D2; 612 episodes, 0 errors): B0 34.0%; D1 0% (33/33 blocked) but 73.2% normal; **D1h 0% (34/34 blocked), 87.5% normal, 0 tasks lost vs B0**; D2 1.0%. Report §VI-B, deck v2 slide 10 | Rui (Claude) | ☑ |
-| 10.0d | Next: adopt D1h (also in D1+D2); rewrite "read and answer" LLMail tasks so the question needs the attack email, without naming the sender | Rui | ☐ |
-| 10.1 | Held-out attack set (new LLMail sample, different seed; 2 unseen styles; obfuscated links) + 3 runs × 5 configs (~2,300 episodes, overnight) + Qwen2.5-7B replication (1 run) | Rui | ☐ |
-| 10.2 | AgentDojo workspace suite: B0, B1, D1+D2 × 1 run | Khadijah | ☐ |
-| 10.3 | Stretch: multi-turn / MUSE-style split-payload attacks | Both | ☐ |
+| 10.0d | Suite v3 (`email_suite_v3.json`, 153 tasks): LLMail emails carry a partner reference code the user asks for; requests no longer name the sender; controls mirror this. Offline tests: 68 (2 skip on the host) | Rui (Claude) | ☑ |
+| 10.0e | **Dev run on v3, run `20261024-135826`** (b0 b1 d1h d2 d1hd2, 765 episodes, 0 model errors, Ollama 0.40.9, code b22e43f). ASR: **B0 45.4% (44/97)**, B1 0%, D1h 0%, D2 0%, **D1h+D2 0% (CI 0–3.8%)**. Normal tasks: B0 89.3%, B1 80.4%, D1h 89.3%, D2 89.3%, **D1h+D2 89.3% (0 pts vs B0)**. McNemar D1h+D2 vs B0 on attacks: 44 vs 0, p = 1.1e-13. Exposure: read-and-answer 15/20 (was 2/20); multi-turn B0 7/12 (was 0). All pass criteria met. Dev suite, 1 run: confirm on held-out. Files: `results/analysis_dev_v3.json`, `diagnostics_dev_v3.json`, figures `*_dev_v3.png` | Rui (Claude) | ☑ |
+| 10.1 | Held-out set: 40 new LLMail attacks sampled 24 Oct (seed 4202, disjoint from dev) ☑; tooling `build_suite.py --heldout` ☑; **team-written attacks (2 unseen styles + 6 disguised links) ☐, see `docs/HELDOUT_AUTHORING.md`**; then 3 runs × 5 configs + Qwen2.5-7B ☐ | Both | ◐ |
+| 10.2 | AgentDojo workspace v1.2.2: bridge + runner built (`agentdojo_bridge.py`, `run_agentdojo.py`, agentdojo 0.1.35 in image). Oracle replay: B0 hijacked 57/60, D2/D1h/D1h+D2 0/60; D1h false-blocks 8/40 honest tasks. Still to do: timing spike, then B0/B1/D1h+D2 run | Rui (Claude) | ◐ |
+| 10.3 | MUSE-style split-payload multi-turn attacks (in suite v3; automated search not done) | Rui (Claude) | ☑ |
+| 10.4 | Week 11 live demo: `src/demo.py` (`--live`/`--oracle`) + `docs/DEMO_GUIDE.md` (fresh-laptop setup, 5-min script). Still to do: fresh-clone test, backup recording | Rui (Claude) | ◐ |
 
 ## Week 11 (26 Oct – 1 Nov): analysis
 | # | Item | Owner | Status |
@@ -94,10 +97,17 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 - [ ] **Both:** rehearse deck v3 twice with a timer (target 9:30); each drills `Interim_QA_Prep.md` Part B for their topics.
 - [ ] **Both:** agree the answer to the panel question (AgentDojo vs second model).
 - [x] 8 Oct: B1's 2 pilot failures traced (via argument shapes, no text read) to a bug: multi-line subjects leaked to the planner. Fixed + regression test; recheck run 20261008-094725: B1 0/9, B0 4/9 on subject attacks. Report §VII-A updated.
-- [ ] Rui: `.wslconfig` memory cap (e.g. `memory=6GB`) before any new run (image already rebuilt).
+- [x] 24 Oct: `.wslconfig` caps WSL at 6 GB. Even so, the host ran critically low on memory during the dev run; close other apps during runs.
+- [ ] **Rui + Khadijah:** write the held-out attacks (`docs/HELDOUT_AUTHORING.md`), then say "held-out ready".
+- [ ] AgentDojo timing spike, then the overnight AgentDojo run.
+- [ ] Turn off Ollama auto-update (tray settings). Every summary now records `ollama_version`.
+- [ ] Before Week 11: fresh-clone test of `docs/DEMO_GUIDE.md` and a backup screen recording.
 - [ ] Decide the question for the panel: AgentDojo vs Qwen2.5 replication priority.
 
 ## Decisions log
+- 24 Oct: Defenses frozen (`defenses-frozen-v1`) before any held-out attack existed. Held-out attacks are written by the team, never by Claude (Claude wrote D1's rules). Claude reads only `tasks/heldout_manifest.json`.
+- 24 Oct: The repo is public, but attack text (payloads), transcripts (raw results), copyrighted papers and course deliverables are not committed. Payloads are regenerated locally by `build_suite.py` / `import_llmail.py`.
+- 24 Oct: AgentDojo D2 policy is derived from each user task's ground-truth calls (AgentDojo ships no policies), so it is an oracle-derived upper bound; disclose this in the report.
 - 8 Oct: D1h (sender addresses allowed in text, not as recipients) replaces D1 from Week 10, subject to the held-out set. Naming the attack sender in the request made it user-trusted under D1/D1h; v3 tasks will refer to it without naming it.
 - 8 Oct: Headline ASR stays strict (LLMail/AgentDojo-comparable). The report also gives success-given-exposure (B0 40%) and any-attacker-action (B0 36%), plus attempted-vs-blocked per defense (D1 blocked 33/33).
 - 8 Oct: Report cross-checked against the data; 21 corrections made (see Interim_Report.md). Ollama auto-updated 0.35.1 → 0.40.1 between pilot and recheck; pin the version before Week 10 runs.

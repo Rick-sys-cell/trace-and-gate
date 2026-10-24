@@ -1,0 +1,5 @@
+# The agent, tools, scoring and isolation check use only the Python standard library.
+# Add pinned analysis/benchmark deps here when needed (installed at build time only;
+# the running container has no internet), e.g.:
+# pandas==2.2.3
+# agentdojo==0.1.35   # Week 10: AgentDojo workspace suite

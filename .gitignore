@@ -1,0 +1,20 @@
+# Attack text and full transcripts: never committed (see .claude/settings.json)
+sandbox/benchmark/payloads/
+sandbox/results/raw/
+sandbox/results/progress/
+
+# Python / local
+__pycache__/
+*.pyc
+.env
+*.bak.docx
+~$*
+
+# Copyrighted papers
+References/
+
+# Course deliverables: kept private until after grading
+1_Interim_Submission/
+2_Presentation_Prep/
+_archive/
+3_Sources/*.docx

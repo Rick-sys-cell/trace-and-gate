@@ -1,0 +1,6 @@
+results/
+benchmark/
+tests/
+**/__pycache__/
+*.md
+.env

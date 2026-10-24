@@ -275,9 +275,10 @@ class CombinedDefense(NoDefense):
     """D1 + D2: D2's tool allowlist, both checks must allow, both observe."""
 
     name = "d1d2"
+    d1_class = ProvenanceDefense
 
     def __init__(self):
-        self.d1, self.d2 = ProvenanceDefense(), PolicyDefense()
+        self.d1, self.d2 = self.d1_class(), PolicyDefense()
 
     def visible_tools(self, task, all_tools):
         return self.d2.visible_tools(task, all_tools)
@@ -289,6 +290,13 @@ class CombinedDefense(NoDefense):
     def observe(self, tool, result, ctx):
         self.d1.observe(tool, result, ctx)
         self.d2.observe(tool, result, ctx)
+
+
+class CombinedHeaderDefense(CombinedDefense):
+    """D1h + D2: the Week 10 combination (D1h replaced D1 after the 8 Oct rerun)."""
+
+    name = "d1hd2"
+    d1_class = ProvenanceHeaderDefense
 
 
 # ---------------------------------------------------------------------------
@@ -382,7 +390,7 @@ class DualLLMDefense(NoDefense):
 
 
 DEFENSES = {"b0": NoDefense, "b1": DualLLMDefense, "d1": ProvenanceDefense, "d1h": ProvenanceHeaderDefense,
-            "d2": PolicyDefense, "d1d2": CombinedDefense}
+            "d2": PolicyDefense, "d1d2": CombinedDefense, "d1hd2": CombinedHeaderDefense}
 
 
 def get_defense(name: str, llm=None):

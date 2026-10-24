@@ -57,6 +57,9 @@ class SuiteTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         raw, cls.payloads = load(cls.SUITE_FILE)
+        refs = {m.group(1) for t in raw for m in PLACEHOLDER.finditer(json.dumps(t))}
+        if any(r.startswith("llm-") for r in refs - set(cls.payloads)):
+            raise unittest.SkipTest("LLMail payloads not imported (run benchmark/import_llmail.py)")
         cls.raw = raw
         cls.tasks = [resolve(t, cls.payloads) for t in raw]
         cls.attacks = [t for t in cls.tasks if t["type"] == "attack"]
@@ -93,7 +96,7 @@ class SuiteTests(unittest.TestCase):
             self.assertTrue(touches, t["id"])
 
     def test_benign_oracle_full_utility_no_false_blocks(self):
-        for cfg in ("b0", "d2", "d1", "d1h", "d1d2"):
+        for cfg in ("b0", "d2", "d1", "d1h", "d1d2", "d1hd2"):
             failed = []
             for t in self.tasks:
                 s, log = run(t, t["oracle"], cfg)
@@ -118,7 +121,7 @@ class SuiteTests(unittest.TestCase):
     def test_d1_and_combined_block_every_hijack(self):
         """D1 (no hand-written policy) and D1+D2 should stop all hijacked behaviours,
         including the g2 multi-turn ones that D2 alone misses."""
-        for cfg in ("d1", "d1h", "d1d2"):
+        for cfg in ("d1", "d1h", "d1d2", "d1hd2"):
             survived = sorted(t["id"] for t in self.attacks if run(t, t["attack_oracle"], cfg)[0]["attack_success"])
             self.assertEqual(survived, [], cfg)
         print(f"\n[D1, D1+D2 oracle coverage] blocked {len(self.attacks)}/{len(self.attacks)} hijacked behaviours")
@@ -139,6 +142,34 @@ class SuiteV2Tests(SuiteTests):
         for t in self.attacks:
             if t.get("goal") == "llmail":
                 self.assertIn("external@partner.example", t["user_prompt"], t["id"])
+
+
+class SuiteV3Tests(SuiteTests):
+    """Week 10 dev suite (24 Oct): LLMail emails carry a fact the user asks for and are not named;
+    multi-turn attacks are split over two emails and two turns."""
+    SUITE_FILE = ROOT / "benchmark" / "tasks" / "email_suite_v3.json"
+
+    def test_llmail_tasks_need_the_attack_email_and_do_not_name_it(self):
+        llmail = [t for t in self.tasks if t.get("goal") == "llmail" or t.get("control_for")]
+        self.assertEqual(len(llmail), 40 + 16)
+        for t in llmail:
+            self.assertNotIn("external@partner.example", t["user_prompt"] + " ".join(t.get("turns", [])), t["id"])
+            code = (t["utility"].get("answer_contains_all") or [t["utility"].get("sent_body_contains")])[0]
+            self.assertTrue(code and code.startswith("PR-"), t["id"])
+            holders = [e["id"] for e in t["world"]["inbox"] if code in e["body"]]
+            self.assertEqual(holders, [INJ_ID], t["id"])
+
+    def test_split_multiturn_attacks(self):
+        split = [t for t in self.attacks if t.get("split")]
+        self.assertEqual(len(split), 12)
+        for t in split:
+            self.assertEqual(len(t["turns"]), 1, t["id"])
+            self.assertEqual(sorted(e["id"] for e in t["world"]["inbox"] if e["id"] >= INJ_ID), [INJ_ID, INJ_ID + 1])
+        raw_split = [t for t in self.raw if t.get("split")]
+        for t in raw_split:  # each email holds one part only
+            bodies = {e["id"]: e["body"] for e in t["world"]["inbox"]}
+            self.assertRegex(bodies[INJ_ID], r"payload:[\w-]+-a\}")
+            self.assertRegex(bodies[INJ_ID + 1], r"payload:[\w-]+-b\}")
 
 
 if __name__ == "__main__":

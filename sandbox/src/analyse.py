@@ -14,8 +14,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results"
-ORDER = ["b0", "b1", "d1", "d1h", "d2", "d1d2"]
-LABEL = {"b0": "B0 none", "b1": "B1 Dual-LLM", "d1": "D1 provenance", "d1h": "D1h", "d2": "D2 policy", "d1d2": "D1+D2"}
+ORDER = ["b0", "b1", "d1", "d1h", "d2", "d1d2", "d1hd2"]
+LABEL = {"b0": "B0 none", "b1": "B1 Dual-LLM", "d1": "D1 provenance", "d1h": "D1h", "d2": "D2 policy", "d1d2": "D1+D2", "d1hd2": "D1h+D2"}
 
 
 def wilson(k, n, z=1.96):
@@ -59,11 +59,14 @@ def main():
         rows[cfg] = []
         for key, v in summary["configs"][cfg]["per_task"].items():
             t = meta[key.split("#")[0]]
-            rows[cfg].append({**v, "id": t["id"], "type": t["type"], "goal": t.get("goal"),
+            rows[cfg].append({**v, "id": t["id"], "key": key, "run": int(key.split("#run")[1]) if "#run" in key else 0,
+                              "type": t["type"], "goal": t.get("goal"),
                               "channel": t.get("channel"), "control_for": t.get("control_for")})
 
     out = {"run_id": summary["run_id"], "model": summary["model"], "aborted": summary.get("aborted"),
-           "configs": {}, "by_channel": {}, "by_goal": {}, "controls": {}, "mcnemar": {}}
+           "runs": summary.get("runs", 1), "ollama_version": summary.get("ollama_version"),
+           "code_version": summary.get("code_version"),
+           "configs": {}, "by_channel": {}, "by_goal": {}, "controls": {}, "mcnemar": {}, "per_run": {}}
     for cfg in configs:
         c = summary["configs"][cfg]
         att = [r for r in rows[cfg] if r["type"] == "attack"]
@@ -75,6 +78,11 @@ def main():
             "errors_or_caps": c["timeouts"], "mean_seconds": c["mean_seconds"],
             "mean_llm_calls": c["mean_llm_calls"], "mean_reader_calls": c.get("mean_reader_calls", 0),
             "mean_tokens": c["mean_tokens"]}
+        runs = sorted({r["run"] for r in rows[cfg]})
+        if len(runs) > 1:  # spread across repeated runs (pooled numbers above)
+            out["per_run"][cfg] = {
+                f"run{n}": {"asr": rate([r for r in att if r["run"] == n], "attack_success")["rate"],
+                            "utility": rate([r for r in ben if r["run"] == n], "utility")["rate"]} for n in runs}
         for field, bucket in (("channel", "by_channel"), ("goal", "by_goal")):
             groups = defaultdict(list)
             for r in att:
@@ -87,20 +95,22 @@ def main():
                   and ("sent_to" in meta[r["id"]]["utility"]) == (mode == "send")]
             out["controls"].setdefault(cfg, {})[mode] = {"no_attack_utility": rate(ctrl, "utility"),
                                                          "under_llmail_attack_utility": rate(lm, "utility")}
-    # paired tests: D1+D2 against every other config (attacks: ASR; benign: utility)
-    if "d1d2" in configs:
-        ref = {r["id"]: r for r in rows["d1d2"]}
+    # paired tests (same task and run): the combined defense against every other config
+    # (attacks: ASR; benign: utility). D1h+D2 is the reference from Week 10 on.
+    refcfg = next((c for c in ("d1hd2", "d1d2") if c in configs), None)
+    if refcfg:
+        ref = {r["key"]: r for r in rows[refcfg]}
         for cfg in configs:
-            if cfg == "d1d2":
+            if cfg == refcfg:
                 continue
-            other = {r["id"]: r for r in rows[cfg]}
+            other = {r["key"]: r for r in rows[cfg]}
             res = {}
             for kind, key in (("attack", "attack_success"), ("benign", "utility")):
                 ids = [i for i in ref if ref[i]["type"] == kind and i in other]
                 b = sum(bool(other[i][key]) and not ref[i][key] for i in ids)
                 c = sum(bool(ref[i][key]) and not other[i][key] for i in ids)
-                res[kind] = {"other_only": b, "d1d2_only": c, "p": mcnemar_exact(b, c)}
-            out["mcnemar"][f"d1d2_vs_{cfg}"] = res
+                res[kind] = {"other_only": b, f"{refcfg}_only": c, "p": mcnemar_exact(b, c)}
+            out["mcnemar"][f"{refcfg}_vs_{cfg}"] = res
     out["tasks_file"] = suite_file.name
     (RESULTS / f"analysis{tag}.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
     figures(out, configs, tag)
@@ -121,7 +131,7 @@ def figures(out, configs, tag=""):
                          "axes.labelcolor": INK2, "xtick.color": INK2, "ytick.color": INK2,
                          "figure.facecolor": SURF, "axes.facecolor": SURF})
 
-    SHORT = {"b0": "B0", "b1": "B1", "d1": "D1", "d1h": "D1h", "d2": "D2", "d1d2": "D1+D2"}
+    SHORT = {"b0": "B0", "b1": "B1", "d1": "D1", "d1h": "D1h", "d2": "D2", "d1d2": "D1+D2", "d1hd2": "D1h+D2"}
     # "wide" = slides (7.2 in); "col" = one IEEE column of the report (3.45 in, white paper)
     specs = {"wide": dict(w=7.2, h1=3.6, h2=3.2, fs=10, small=8, cell=7.5, labels=LABEL, surf=SURF, suffix="",
                           names={"attachment": "Attachment", "body": "Email body", "subject": "Subject line",

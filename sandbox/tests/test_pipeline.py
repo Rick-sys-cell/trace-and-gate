@@ -172,6 +172,38 @@ class AbortTests(unittest.TestCase):
             self.assertEqual(n, run_eval.MAX_CONSECUTIVE_ERRORS)
 
 
+class ResumeTests(unittest.TestCase):
+    def test_resume_skips_finished_episodes_and_keeps_numbers_only_progress(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as d:
+            data = Path(d)
+            shutil.copytree(ROOT / "benchmark", data / "benchmark")
+            run_eval.BENCH, run_eval.RESULTS = data / "benchmark", data / "results"
+
+            class CountingChat:
+                model, calls = "fake", 0
+
+                def __call__(self, messages, tools):
+                    CountingChat.calls += 1
+                    return {"message": {"content": "3pm. Payslip and volunteer emails."},
+                            "prompt_tokens": 1, "completion_tokens": 1}
+            run_eval.OllamaChat = CountingChat
+            run_eval.main(["--configs", "b0", "d2"])
+            run_id = json.loads((data / "results" / "summary.json").read_text())["run_id"]
+            progress = data / "results" / "progress" / f"{run_id}.jsonl"
+            rows = progress.read_text().splitlines()
+            self.assertEqual(len(rows), 4)
+            self.assertNotIn("log", json.loads(rows[0]))
+            # simulate a crash after the first two episodes, then resume
+            progress.write_text("\n".join(rows[:2]) + "\n")
+            CountingChat.calls = 0
+            run_eval.main(["--configs", "b0", "d2", "--resume", run_id])
+            self.assertEqual(CountingChat.calls, 2)  # only the two missing episodes ran
+            summary = json.loads((data / "results" / "summary.json").read_text())
+            self.assertEqual(summary["run_id"], run_id)
+            self.assertEqual(sum(c["n_benign"] + c["n_attack"] for c in summary["configs"].values()), 4)
+
+
 def _copytree(src, dst):
     import shutil
     shutil.copytree(src, dst)

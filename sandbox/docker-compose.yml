@@ -31,6 +31,7 @@ services:
       MAX_STEPS: ${MAX_STEPS:-15}
       EPISODE_TIMEOUT_S: ${EPISODE_TIMEOUT_S:-300}
       CALL_TIMEOUT_S: ${CALL_TIMEOUT_S:-180}
+      GIT_COMMIT: ${GIT_COMMIT:-unknown}   # set on the host: GIT_COMMIT=$(git rev-parse --short HEAD)
     volumes:
       # Only these two host folders are visible. Never mount $HOME, ~/.ssh or docker.sock.
       - ./benchmark:/data/benchmark:ro

@@ -25,6 +25,14 @@ class OllamaChat:
         self.model = model
         self.base_url = base_url.rstrip("/")
 
+    def version(self) -> str:
+        """Ollama server version (recorded in every summary: it auto-updated mid-project once)."""
+        try:
+            with urllib.request.urlopen(self.base_url + "/api/version", timeout=10) as resp:
+                return json.loads(resp.read()).get("version", "unknown")
+        except (urllib.error.URLError, ConnectionError, ValueError):
+            return "unknown"
+
     def __call__(self, messages: list[dict], tools: list[dict] | None = None) -> dict:
         payload = {
             "model": self.model,

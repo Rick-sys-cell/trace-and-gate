@@ -107,25 +107,37 @@ def main(argv=None) -> int:
     ap.add_argument("--configs", nargs="+", default=["b0"])
     ap.add_argument("--runs", type=int, default=1)
     ap.add_argument("--smoke", action="store_true", help="1 benign + 1 attack task on b0")
+    ap.add_argument("--resume", metavar="RUN_ID", help="continue an interrupted run; finished episodes are skipped")
+    ap.add_argument("--label", default="", help="suffix for the extra summary copy, e.g. heldout")
     args = ap.parse_args(argv)
     if args.smoke:
         args.tasks, args.configs, args.runs = str(BENCH / "tasks" / "smoke.json"), ["b0"], 1
 
     payloads = load_payloads()
     tasks = json.loads(Path(args.tasks).read_text(encoding="utf-8"))
-    run_id = time.strftime("%Y%m%d-%H%M%S")
+    run_id = args.resume or time.strftime("%Y%m%d-%H%M%S")
     (RESULTS / "raw").mkdir(parents=True, exist_ok=True)
+    (RESULTS / "progress").mkdir(parents=True, exist_ok=True)
     raw_path = RESULTS / "raw" / f"{run_id}.jsonl"
+    # Numbers-only copy of every row (no model text): safe to read, and the source for --resume.
+    progress_path = RESULTS / "progress" / f"{run_id}.jsonl"
     llm = OllamaChat()
-    rows = []
+    rows = [json.loads(l) for l in progress_path.read_text(encoding="utf-8").splitlines() if l.strip()] \
+        if args.resume and progress_path.exists() else []
+    done = {(r["config"], r["run"], r["task_id"]) for r in rows}
+    if args.resume:
+        print(f"resuming {run_id}: {len(done)} episodes already done", flush=True)
     consecutive_errors, aborted = 0, False
 
-    with raw_path.open("w", encoding="utf-8") as raw:
+    mode = "a" if args.resume else "w"
+    with raw_path.open(mode, encoding="utf-8") as raw, progress_path.open(mode, encoding="utf-8") as prog:
         for cfg in args.configs:
             for run in range(args.runs):
                 for task in tasks:
                     if aborted:
                         break
+                    if (cfg, run, task["id"]) in done:
+                        continue
                     task_r = resolve(task, payloads)
                     world = EmailWorld.from_spec(task_r["world"])
                     log = run_episode(task_r, world, llm, get_defense(cfg, llm))
@@ -142,6 +154,8 @@ def main(argv=None) -> int:
                                 "attempt_blocked": dg["blocked"], "partial": dg["partial_allowed"]}
                     rows.append(row)
                     raw.write(json.dumps({**row, "log": log}, default=str) + "\n")
+                    prog.write(json.dumps(row) + "\n")
+                    prog.flush()
                     # Progress line: ids and booleans only, no model text.
                     print(f"[{cfg} r{run}] {task['id']}: utility={row['utility']} "
                           f"attack={row['attack_success']} outcome={row['outcome']} "
@@ -152,9 +166,13 @@ def main(argv=None) -> int:
                         print(f"ABORTED: {consecutive_errors} consecutive model errors; "
                               "check Ollama / gateway, results are not valid", flush=True)
 
-    summary = {"run_id": run_id, "model": llm.model, "tasks_file": Path(args.tasks).name,
+    summary = {"run_id": run_id, "model": llm.model, "ollama_version": getattr(llm, "version", lambda: "unknown")(),
+               "code_version": os.environ.get("GIT_COMMIT", "unknown"), "tasks_file": Path(args.tasks).name,
                "runs": args.runs, "aborted": aborted, "configs": summarise(rows)}
-    (RESULTS / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    text = json.dumps(summary, indent=2)
+    (RESULTS / "summary.json").write_text(text, encoding="utf-8")
+    if args.label:
+        (RESULTS / f"summary_{args.label}_{run_id}.json").write_text(text, encoding="utf-8")
     print(f"summary written to {RESULTS / 'summary.json'}")
     llm_errors = sum(r["outcome"].startswith("llm_error") for r in rows)
     return 1 if aborted or llm_errors == len(rows) else 0

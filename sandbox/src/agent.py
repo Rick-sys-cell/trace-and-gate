@@ -78,12 +78,15 @@ def _run_turn(messages, schemas, names, tools, task, world, llm, defense, log, s
             ctx = {"task": task, "world": world, "messages": messages}
             args = defense.resolve_args(args)  # B1: substitute $VAR references
             decision = defense.check(name, args, ctx)
+            reason = ""  # which rule fired (fixed strings from defenses.py, never model text)
             if name not in names:
                 if name in tools:  # real tool hidden by the defense
                     log["blocked"] += 1
+                    reason = "tool hidden by the task's allowlist"
                 result = ToolResult(f"error: tool '{name}' is not available", "system", True)
             elif not decision.allowed:
                 log["blocked"] += 1
+                reason = decision.reason
                 result = ToolResult("error: action not permitted by policy", "system", True)
             else:
                 try:
@@ -93,7 +96,8 @@ def _run_turn(messages, schemas, names, tools, task, world, llm, defense, log, s
             defense.observe(name, result, ctx)
             result = defense.transform(name, result, ctx)  # B1: quarantine untrusted text
             log["calls"].append({"tool": name, "args": args,
-                                 "allowed": name in names and decision.allowed})
+                                 "allowed": name in names and decision.allowed,
+                                 **({"reason": reason} if reason else {})})
             messages.append({"role": "tool", "tool_name": name,
                              "content": result.text[:MAX_TOOL_CHARS]})
     return {"status": "step_cap"}

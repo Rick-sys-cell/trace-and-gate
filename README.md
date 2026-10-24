@@ -36,7 +36,7 @@ agent container ──(internal network, no internet)──► nginx gateway ─
   read-only fs, non-root, no capabilities              whitelists only the inference endpoints
 ```
 
-- `sandbox/src/`: agent loop (`agent.py`), simulated mailbox (`email_env.py`), defenses (`defenses.py`), scoring, runner (`run_eval.py`), analysis, isolation check.
+- `sandbox/src/`: agent loop (`agent.py`), simulated mailbox (`email_env.py`), defenses (`defenses.py`), scoring, runner (`run_eval.py`), analysis, live demo (`demo.py`), isolation check, AgentDojo bridge (`agentdojo_bridge.py`, `run_agentdojo.py`).
 - `sandbox/benchmark/`: `build_suite.py` generates the tasks; `import_llmail.py` samples real attacks from [LLMail-Inject](https://huggingface.co/datasets/microsoft/llmail-inject-challenge).
 - `sandbox/tests/`: offline unit tests, including oracle replays of every scripted hijack against each defense.
 - `sandbox/results/`: numbers-only summaries and figures.
@@ -53,12 +53,16 @@ Needs Git, Docker Desktop, Ollama and Python 3.10+.
 ```bash
 ollama pull qwen3:8b
 git clone https://github.com/Rick-sys-cell/trace-and-gate.git && cd trace-and-gate/sandbox
-python benchmark/build_suite.py --version 2        # writes the template attack payloads locally
+python benchmark/build_suite.py --version 3        # writes the template attack payloads locally
 docker compose build
 docker compose run --rm agent python src/isolation_check.py
-docker compose run --rm agent python src/run_eval.py --smoke   # 1 normal + 1 attack task
-python -m unittest discover -s tests                            # offline tests
+docker compose run --rm agent python src/demo.py --oracle   # instant, no model needed
+docker compose run --rm agent python src/demo.py --live     # real model
+python -m unittest discover -s tests                         # offline tests
 ```
+
+- [`docs/DEMO_GUIDE.md`](docs/DEMO_GUIDE.md): step-by-step setup and a 5-minute demo script for a fresh laptop.
+- [`docs/HELDOUT_AUTHORING.md`](docs/HELDOUT_AUTHORING.md): how the held-out attacks are written (by the team, never by the AI assistant).
 
 ## AI use
 

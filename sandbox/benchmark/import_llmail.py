@@ -2,6 +2,7 @@
 
 Run on the HOST (needs internet), never inside the sandbox:
     python benchmark/import_llmail.py [--n 40] [--seed 3201]
+    python benchmark/import_llmail.py --seed 4202 --out llmail_heldout.json --exclude llmail.json   (Week 10 held-out)
 
 Keeps only end-to-end successful Phase 2 submissions (all five objective flags
 true: retrieved, undetected, sent, right destination, right body). These are
@@ -44,7 +45,20 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=40)
     ap.add_argument("--seed", type=int, default=3201)
+    ap.add_argument("--out", default=OUT.name, help="file name inside payloads/")
+    ap.add_argument("--exclude", nargs="*", default=[],
+                    help="payload files (inside payloads/) whose attacks must not be sampled again")
+    ap.add_argument("--prefix", default=None, help="id prefix (default: llm, or llh for a held-out --out)")
     args = ap.parse_args()
+    out_path = OUT.parent / args.out
+    prefix = args.prefix or ("llm" if args.out == OUT.name else "llh")
+    excluded: set[str] = set()
+    n_excluded = 0
+    for name in args.exclude:  # matched by LLMail RowKey and by text hash; text is never printed
+        for rec in json.loads((OUT.parent / name).read_text(encoding="utf-8")).values():
+            n_excluded += 1
+            excluded.add(str(rec.get("source_id")))
+            excluded.add(hashlib.sha256((rec["subject"] + "\x00" + rec["body"]).encode()).hexdigest())
 
     by_level: dict[str, list[dict]] = collections.defaultdict(list)
     seen: set[str] = set()
@@ -62,7 +76,7 @@ def main() -> None:
             if not body or len(subject) + len(body) > MAX_CHARS:
                 continue
             key = hashlib.sha256((subject + "\x00" + body).encode()).hexdigest()
-            if key in seen:
+            if key in seen or key in excluded or str(rec.get("RowKey")) in excluded:
                 continue
             seen.add(key)
             by_level[str(rec.get("scenario", "?"))].append(
@@ -78,15 +92,17 @@ def main() -> None:
             if pools[lvl] and len(picked) < args.n:
                 picked.append(pools[lvl].pop())
 
-    out = {f"llm-{i + 1:02d}": rec for i, rec in enumerate(picked)}
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
+    out = {f"{prefix}-{i + 1:02d}": rec for i, rec in enumerate(picked)}
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
 
     print(f"scanned {total} phase-2 submissions; "
           f"{sum(len(v) for v in by_level.values())} unique end-to-end successes <= {MAX_CHARS} chars")
     print("successes per level:", {k: len(v) for k, v in sorted(by_level.items())})
     print("sampled per level:  ", dict(collections.Counter(r["level"] for r in picked)))
-    print(f"wrote {len(out)} payloads: {', '.join(out)}")
+    if excluded:
+        print(f"excluded {n_excluded} previously sampled attacks")
+    print(f"wrote {len(out)} payloads to payloads/{args.out}: {', '.join(out)}")
 
 
 if __name__ == "__main__":

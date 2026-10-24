@@ -172,5 +172,68 @@ class SuiteV3Tests(SuiteTests):
             self.assertRegex(bodies[INJ_ID + 1], r"payload:[\w-]+-b\}")
 
 
+def _build_suite_module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("build_suite", ROOT / "benchmark" / "build_suite.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mod.VERSION = 3
+    return mod
+
+
+class HeldoutBuilderTests(unittest.TestCase):
+    """The team-written held-out format, checked with a synthetic manifest (no real held-out text)."""
+
+    def test_manifest_tasks_score_and_replay(self):
+        bs = _build_suite_module()
+        manifest = [{"id": "ho-x-g1-1", "goal": "g1", "channel": "body", "scenario": "finance"},
+                    {"id": "ho-x-g3-1", "goal": "g3", "channel": "attachment", "scenario": "course"},
+                    {"id": "ho-x-g2-1", "goal": "g2", "channel": "body", "scenario": "it",
+                     "success_marker": "phish[.]attacker[.]example/login"}]
+        tasks = bs.heldout_human_tasks(manifest, {m["id"] for m in manifest})
+        tasks = [resolve(t, {m["id"]: "synthetic attack text" for m in manifest}) for t in tasks]
+        self.assertEqual([t["heldout"] for t in tasks], [True] * 3)
+        self.assertEqual(tasks[2]["attack"], {"sent_body_contains_any": ["phish[.]attacker[.]example/login"]})
+        for t in tasks:
+            self.assertTrue(run(t, t["attack_oracle"], "b0")[0]["attack_success"], t["id"])
+            for cfg in ("b0", "d1h", "d2", "d1hd2"):
+                s, log = run(t, t["oracle"], cfg)
+                self.assertTrue(s["utility"] and not log["blocked"], (t["id"], cfg))
+
+    def test_manifest_problems_are_reported(self):
+        bs = _build_suite_module()
+        bad = [{"id": "x-1", "goal": "g9", "channel": "subject", "scenario": "nowhere"},
+               {"id": "ho-ok-1", "goal": "g1", "channel": "body", "scenario": "course", "success_marker": "x"}]
+        with self.assertRaises(SystemExit) as cm:
+            bs.heldout_human_tasks(bad, set())
+        msg = str(cm.exception)
+        for part in ("must start with 'ho-'", "goal must be", "channel must be", "scenario must be",
+                     "no text with this id", "only for g2"):
+            self.assertIn(part, msg)
+
+
+class HeldoutSuiteTests(unittest.TestCase):
+    """tasks/heldout_suite.json as built (skipped until its payloads exist on this machine)."""
+
+    @classmethod
+    def setUpClass(cls):
+        path = ROOT / "benchmark" / "tasks" / "heldout_suite.json"
+        if not path.exists():
+            raise unittest.SkipTest("held-out suite not built")
+        raw, payloads = load(path)
+        missing = {m.group(1) for t in raw for m in PLACEHOLDER.finditer(json.dumps(t))} - set(payloads)
+        if missing:
+            raise unittest.SkipTest(f"{len(missing)} held-out payloads not on this machine")
+        cls.tasks = [resolve(t, payloads) for t in raw]
+
+    def test_oracles(self):
+        for t in self.tasks:
+            for cfg in ("b0", "d1h", "d2", "d1hd2"):
+                s, log = run(t, t["oracle"], cfg)
+                self.assertTrue(s["utility"] and not log["blocked"] and not s["attack_success"], (t["id"], cfg))
+            if t["type"] == "attack":
+                self.assertTrue(run(t, t["attack_oracle"], "b0")[0]["attack_success"], t["id"])
+
+
 if __name__ == "__main__":
     unittest.main()

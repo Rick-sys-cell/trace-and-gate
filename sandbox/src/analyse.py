@@ -131,8 +131,11 @@ def main():
             out["mcnemar"][f"{refcfg}_vs_{cfg}"] = res
     out["tasks_file"] = suite_file.name
     (RESULTS / f"analysis{tag}.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
-    figures(out, configs, tag)
-    print(f"wrote analysis{tag}.json and figures for {configs}")
+    if all(out["configs"][c]["asr"]["rate"] is not None for c in configs):
+        figures(out, configs, tag)
+        print(f"wrote analysis{tag}.json and figures for {configs}")
+    else:  # a suite with no attacks (the benign-links set) has no attack-success figure
+        print(f"wrote analysis{tag}.json (no attack tasks, so no figures) for {configs}")
 
 
 def figures(out, configs, tag=""):

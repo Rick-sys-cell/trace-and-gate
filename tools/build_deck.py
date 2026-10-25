@@ -46,7 +46,10 @@ class Data:
         self.heldout_analysis = load("analysis_heldout.json")
 
     def ds(self, key):
-        return self.t.get(key)
+        d = self.t.get(key)
+        if key == "agentdojo" and d and d.get("user_tasks", 0) < 40:
+            return None  # the timing spike, not a result
+        return d
 
     def cfg(self, key, cfg):
         d = self.ds(key)
@@ -331,7 +334,8 @@ def s_links(s, D):
         rows.append(row)
     fill_table(tables(s)[0], rows, widths=[2.2, 0.95, 0.95, 0.95, 0.95], row_height=0.42)
     set_text(by_text(s, "Pilot → rerun"), "Normal tasks done, 3 runs. D1h-L* is exploratory: added after the freeze, "
-             "lets a link out only when the user asks for a link from a named email sent by a contact.")
+             "lets a link out only when the user asks for a link from a named email sent by a contact. Reply row: "
+             "the model first replied to a made-up email id; every defense refused it and the agent gave up.")
     below(by_text(s, "Normal tasks done, 3 runs"), tables(s)[0])
     sl = lambda c: (br or {}).get(c, {}).get("link_flows", {}).get("send-link")  # noqa: E731
     set_text(by_text(s, "0% · 0 lost"), f"{100 * sl('d1h')['utility'] / sl('d1h')['n']:.0f}%" if sl("d1h") else PENDING)
@@ -346,10 +350,13 @@ def s_links(s, D):
     lk_note = f" Across all {lk['configs']['b0']['utility']['n']} link episodes per config." if lk else ""
     return ("Our first benchmark had no normal task with a link in it, so it could not show this cost. (pause) D1h "
             "blocks any link copied from an email into a new message, because it cannot tell a colleague's Zoom link "
-            "from a phishing link. Asking for the link, forwarding the email, or typing your own link all still "
-            "work. (pause) We tried an exploratory fix, D1h-L, after the freeze: a link may go out if the user asks "
-            "for a link, names the email, and that email came from a contact. It recovers the flow and let no attack "
-            "through, but a compromised contact account would defeat it." + lk_note +
+            "from a phishing link. Asking for the link and forwarding the email still always work. (pause) We tried "
+            "an exploratory fix, D1h-L, after the freeze: a link may go out if the user asks for a link, names the "
+            "email, and that email came from a contact. It recovers the flow and let no attack through, but a "
+            "compromised contact account would defeat it. (pause) The reply row fails for a different reason: the "
+            "model's first move was a reply to an email id that does not exist. Without a defense it got 'no such "
+            "email' and recovered; with a defense it got a plain refusal and gave up. How a defense refuses matters."
+            + lk_note +
             "\n\nKey line: Measure the cost on harmless work, not only on attacks.")
 
 

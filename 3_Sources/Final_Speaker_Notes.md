@@ -46,13 +46,13 @@ Key line: Zero held-out attacks got through, and the attacks that worked were re
 
 ## 8. Does it carry over? A second model and AgentDojo
 
-Does this carry over? (pause) First, a second model family: Qwen2.5-7B on the same held-out set, one run. With no defense PENDING of attacks worked; with a defense, at most PENDING. (pause) Second, AgentDojo's workspace suite, a different benchmark with its own tools and attack. One caveat: AgentDojo has no per-task policies, so D2's policy comes from the task's ground truth. That makes D2 an upper bound there.
+Does this carry over? (pause) First, a second model family: Qwen2.5-7B on the same held-out set, one run. With no defense 29.3% of attacks worked; with a defense, at most 0.0%. (pause) Second, AgentDojo's workspace suite, a different benchmark with its own tools and attack. One caveat: AgentDojo has no per-task policies, so D2's policy comes from the task's ground truth. That makes D2 an upper bound there.
 
 Key line: Same pattern on a second model and a second benchmark.
 
 ## 9. The cost we almost missed: harmless links
 
-Our first benchmark had no normal task with a link in it, so it could not show this cost. (pause) D1h blocks any link copied from an email into a new message, because it cannot tell a colleague's Zoom link from a phishing link. Asking for the link, forwarding the email, or typing your own link all still work. (pause) We tried an exploratory fix, D1h-L, after the freeze: a link may go out if the user asks for a link, names the email, and that email came from a contact. It recovers the flow and let no attack through, but a compromised contact account would defeat it.
+Our first benchmark had no normal task with a link in it, so it could not show this cost. (pause) D1h blocks any link copied from an email into a new message, because it cannot tell a colleague's Zoom link from a phishing link. Asking for the link and forwarding the email still always work. (pause) We tried an exploratory fix, D1h-L, after the freeze: a link may go out if the user asks for a link, names the email, and that email came from a contact. It recovers the flow and let no attack through, but a compromised contact account would defeat it. (pause) The reply row fails for a different reason: the model's first move was a reply to an email id that does not exist. Without a defense it got 'no such email' and recovered; with a defense it got a plain refusal and gave up. How a defense refuses matters. Across all 120 link episodes per config.
 
 Key line: Measure the cost on harmless work, not only on attacks.
 

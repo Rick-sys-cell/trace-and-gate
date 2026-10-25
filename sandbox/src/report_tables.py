@@ -87,12 +87,16 @@ def source_table(a, bucket="by_source", names=SOURCE):
     return rows
 
 
+def _p(v):
+    return "–" if v is None else f"{100 * v:.1f}"
+
+
 def per_run_line(a):
     pr = a.get("per_run", {})
     if not pr:
         return []
     return ["Per run (attack success / normal tasks done): " + "; ".join(
-        f"{LABEL[c]} " + ", ".join(f"{100 * v['asr']:.1f}/{100 * v['utility']:.1f}" for v in pr[c].values())
+        f"{LABEL[c]} " + ", ".join(f"{_p(v['asr'])}/{_p(v['utility'])}" for v in pr[c].values())
         for c in ORDER if c in pr)]
 
 

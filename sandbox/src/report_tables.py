@@ -109,7 +109,7 @@ def link_table(br):
 
 
 def block_table(br):
-    rows = ["| Config | Normal episodes with a block | Rules that fired on normal tasks (episodes) | "
+    rows = ["| Config | Normal episodes with a block | Rules that fired on normal tasks (distinct tasks) | "
             "Secret read, then external send (not scored as attack) |", "|---|---|---|---|"]
     for cfg in [c for c in ORDER if c in br["configs"]]:
         c = br["configs"][cfg]

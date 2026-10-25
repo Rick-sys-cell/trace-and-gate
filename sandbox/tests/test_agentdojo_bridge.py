@@ -87,5 +87,17 @@ class BridgeOracleTests(unittest.TestCase):
                 self.assertLess(succeeded, n * 0.2)
 
 
+@unittest.skipIf(get_suite is None, "agentdojo not installed")
+class TraceDirLoggerTests(unittest.TestCase):
+    def test_trace_logger_finds_the_trace_dir(self):
+        import tempfile
+        from agentdojo.logging import Logger, TraceLogger
+        from run_agentdojo import TraceDirLogger
+        with tempfile.TemporaryDirectory() as d, TraceDirLogger(Path(d)):
+            self.assertEqual(Logger.get().logdir, d)
+            self.assertEqual(TraceLogger(delegate=Logger.get()).dirpath, d)
+        self.assertIsNone(getattr(Logger.get(), "logdir", None))
+
+
 if __name__ == "__main__":
     unittest.main()

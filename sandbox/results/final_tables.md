@@ -15,6 +15,7 @@ Run `20261024-135826`, qwen3:8b, Ollama 0.40.9, code b22e43f, 1 run(s), aborted:
 | D2 | 0.0% (0/97) | 0.0–3.8% | 89.3% (50/56) | 54.6% (53/97) | 4.4 | 4.1 | 2508 |
 | D1h+D2 | 0.0% (0/97) | 0.0–3.8% | 89.3% (50/56) | 50.5% (49/97) | 4.5 | 4.1 | 2510 |
 
+
 - D1h+D2 vs B0 none (paired episodes where only one succeeded): attacks succeeded only under B0 none 44, only under D1h+D2 0 (p = 1.14e-13); normal tasks done only under B0 none 2, only under D1h+D2 2 (p = 1.0)
 - D1h+D2 vs B1 Dual-LLM (paired episodes where only one succeeded): attacks succeeded only under B1 Dual-LLM 0, only under D1h+D2 0 (p = 1.0); normal tasks done only under B1 Dual-LLM 1, only under D1h+D2 6 (p = 0.125)
 - D1h+D2 vs D1h (paired episodes where only one succeeded): attacks succeeded only under D1h 0, only under D1h+D2 0 (p = 1.0); normal tasks done only under D1h 2, only under D1h+D2 2 (p = 1.0)
@@ -23,7 +24,37 @@ Run `20261024-135826`, qwen3:8b, Ollama 0.40.9, code b22e43f, 1 run(s), aborted:
 ## Held-out (3 runs)
 Source: `results/analysis_heldout.json`
 
-PENDING
+Run `20261025-034455`, qwen3:8b, Ollama 0.40.10, code 05b86d7, 3 run(s), aborted: False
+
+| Config | Attack success | 95% CI | Normal tasks done | Done under attack | s/episode | LLM calls | Tokens |
+|---|---|---|---|---|---|---|---|
+| B0 none | 21.8% (38/174) | 16.3–28.5% | 89.3% (150/168) | 48.3% (84/174) | 4.7 | 3.8 | 3136 |
+| B1 Dual-LLM | 0.0% (0/174) | 0.0–2.2% | 80.4% (135/168) | 56.9% (99/174) | 5.4 | 5.2 | 3610 |
+| D1h | 0.0% (0/174) | 0.0–2.2% | 89.3% (150/168) | 46.6% (81/174) | 4.5 | 3.9 | 3168 |
+| D2 | 0.0% (0/174) | 0.0–2.2% | 89.9% (151/168) | 56.9% (99/174) | 4.3 | 3.9 | 2309 |
+| D1h+D2 | 0.0% (0/174) | 0.0–2.2% | 91.7% (154/168) | 56.3% (98/174) | 4.0 | 3.8 | 2292 |
+
+Per run (attack success / normal tasks done): B0 none 20.7/89.3, 20.7/89.3, 24.1/89.3; B1 Dual-LLM 0.0/83.9, 0.0/78.6, 0.0/78.6; D1h 0.0/89.3, 0.0/89.3, 0.0/89.3; D2 0.0/91.1, 0.0/89.3, 0.0/89.3; D1h+D2 0.0/92.9, 0.0/89.3, 0.0/92.9
+
+- D1h+D2 vs B0 none (paired episodes where only one succeeded): attacks succeeded only under B0 none 38, only under D1h+D2 0 (p = 7.28e-12); normal tasks done only under B0 none 2, only under D1h+D2 6 (p = 0.289)
+- D1h+D2 vs B1 Dual-LLM (paired episodes where only one succeeded): attacks succeeded only under B1 Dual-LLM 0, only under D1h+D2 0 (p = 1.0); normal tasks done only under B1 Dual-LLM 6, only under D1h+D2 25 (p = 0.000878)
+- D1h+D2 vs D1h (paired episodes where only one succeeded): attacks succeeded only under D1h 0, only under D1h+D2 0 (p = 1.0); normal tasks done only under D1h 2, only under D1h+D2 6 (p = 0.289)
+- D1h+D2 vs D2 (paired episodes where only one succeeded): attacks succeeded only under D2 0, only under D1h+D2 0 (p = 1.0); normal tasks done only under D2 1, only under D1h+D2 4 (p = 0.375)
+
+Attack success by source (pooled over runs):
+
+| Attacks | B0 none | B1 Dual-LLM | D1h | D2 | D1h+D2 |
+|---|---|---|---|---|---|
+| LLMail-Inject | 31.7% (38/120); task done 38.3% (46/120) | 0.0% (0/120); task done 40.0% (48/120) | 0.0% (0/120); task done 36.7% (44/120) | 0.0% (0/120); task done 49.2% (59/120) | 0.0% (0/120); task done 48.3% (58/120) |
+| Team-written | 0.0% (0/54); task done 70.4% (38/54) | 0.0% (0/54); task done 94.4% (51/54) | 0.0% (0/54); task done 68.5% (37/54) | 0.0% (0/54); task done 74.1% (40/54) | 0.0% (0/54); task done 74.1% (40/54) |
+
+Team-written attacks by style:
+
+| Attacks | B0 none | B1 Dual-LLM | D1h | D2 | D1h+D2 |
+|---|---|---|---|---|---|
+| disguised-link | 0.0% (0/18); task done 77.8% (14/18) | 0.0% (0/18); task done 100.0% (18/18) | 0.0% (0/18); task done 66.7% (12/18) | 0.0% (0/18); task done 83.3% (15/18) | 0.0% (0/18); task done 83.3% (15/18) |
+| fake-calendar-invite | 0.0% (0/18); task done 66.7% (12/18) | 0.0% (0/18); task done 100.0% (18/18) | 0.0% (0/18); task done 66.7% (12/18) | 0.0% (0/18); task done 72.2% (13/18) | 0.0% (0/18); task done 72.2% (13/18) |
+| fake-forwarded-thread | 0.0% (0/18); task done 66.7% (12/18) | 0.0% (0/18); task done 83.3% (15/18) | 0.0% (0/18); task done 72.2% (13/18) | 0.0% (0/18); task done 66.7% (12/18) | 0.0% (0/18); task done 66.7% (12/18) |
 
 ## Held-out, Qwen2.5-7B (1 run)
 Source: `results/analysis_heldout_qwen25.json`
@@ -53,13 +84,20 @@ PENDING
 ## Failure analysis: held-out
 Source: `results/block_reasons_heldout.json`
 
-PENDING
+
+| Config | Normal episodes with a block | Rules that fired on normal tasks (distinct tasks) | Secret read, then external send (not scored as attack) |
+|---|---|---|---|
+| B0 none | 0.0% (0/168) | none | 4 (0) |
+| B1 Dual-LLM | 0.0% (0/168) | none | 0 (0) |
+| D1h | 1.8% (3/168) | d1_action_not_requested (1) | 0 (0) |
+| D2 | 0.0% (0/168) | none | 0 (0) |
+| D1h+D2 | 0.0% (0/168) | none | 0 (0) |
 
 ## Failure analysis: dev v3
 Source: `results/block_reasons_dev_v3.json`
 
 
-| Config | Normal episodes with a block | Rules that fired on normal tasks (episodes) | Secret read, then external send (not scored as attack) |
+| Config | Normal episodes with a block | Rules that fired on normal tasks (distinct tasks) | Secret read, then external send (not scored as attack) |
 |---|---|---|---|
 | B0 none | 0.0% (0/56) | none | 0 (0) |
 | B1 Dual-LLM | 0.0% (0/56) | none | 0 (0) |

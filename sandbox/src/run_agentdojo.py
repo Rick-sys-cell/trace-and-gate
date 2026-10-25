@@ -26,7 +26,7 @@ from pathlib import Path
 
 from agentdojo.attacks.attack_registry import load_attack
 from agentdojo.benchmark import run_task_with_injection_tasks, run_task_without_injection_tasks
-from agentdojo.logging import NullLogger
+from agentdojo.logging import LOGGER_STACK, NullLogger
 from agentdojo.task_suite.load_suites import get_suite
 
 from agentdojo_bridge import build_pipeline
@@ -37,6 +37,26 @@ DATA = Path(os.environ.get("DATA_DIR", "/data"))
 RESULTS = DATA / "results"
 BENCHMARK_VERSION = "v1.2.2"
 MAX_CONSECUTIVE_ERRORS = 5
+
+
+class TraceDirLogger(NullLogger):
+    """A silent logger that tells AgentDojo's TraceLogger where to write traces.
+
+    agentdojo 0.1.35's NullLogger.__enter__ never pushes itself onto the logger stack, so
+    Logger.get() inside run_task_* returns a fresh NullLogger without .logdir and crashes."""
+
+    def __init__(self, logdir: Path):
+        self._logdir = str(logdir)
+
+    def __enter__(self):
+        super().__enter__()
+        self.logdir = self._logdir
+        LOGGER_STACK.get().append(self)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        LOGGER_STACK.get().pop()
+        return False
 
 
 def natural(task_id: str) -> int:
@@ -95,8 +115,8 @@ def main(argv=None) -> int:
     print(f"{run_id}: {len(user_ids)} user tasks, {len(pairs)} attack pairs per config, "
           f"configs {args.configs}, {len(done)} episodes already done", flush=True)
 
-    with NullLogger() as logger, progress.open("a", encoding="utf-8") as prog:
-        logger.logdir = str(logdir)  # AgentDojo's TraceLogger writes traces here (deny-listed for Claude)
+    # AgentDojo's TraceLogger writes traces to logdir (deny-listed for Claude)
+    with TraceDirLogger(logdir), progress.open("a", encoding="utf-8") as prog:
         for cfg in args.configs:
             pipeline, gate = build_pipeline(cfg, chat, by_prompt, chat.model, reader=chat if cfg == "b1" else None)
             attack = load_attack(args.attack, suite, pipeline)

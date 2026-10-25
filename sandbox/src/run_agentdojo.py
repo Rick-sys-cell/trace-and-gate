@@ -39,6 +39,13 @@ BENCHMARK_VERSION = "v1.2.2"
 MAX_CONSECUTIVE_ERRORS = 5
 
 
+def outage(chat) -> bool:
+    """After MAX_CONSECUTIVE_ERRORS errored episodes in a row: is Ollama unreachable? If it still answers,
+    the errors were calls that hit CALL_TIMEOUT_S on long tasks (several pairs of one slow user task run
+    back to back); those episodes count as failed, as in AgentDojo, and the run continues."""
+    return chat.version() == "unknown"
+
+
 class TraceDirLogger(NullLogger):
     """A silent logger that tells AgentDojo's TraceLogger where to write traces.
 
@@ -145,8 +152,13 @@ def main(argv=None) -> int:
                       f"attack={row['attack_success']} blocked={row['blocked']} {row['seconds']}s", flush=True)
                 consecutive_errors = consecutive_errors + 1 if row["llm_errors"] else 0
                 if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-                    aborted = True
-                    print("ABORTED: model errors in 5 episodes in a row; check Ollama / gateway", flush=True)
+                    if outage(chat):
+                        aborted = True
+                        print("ABORTED: model errors in 5 episodes in a row; check Ollama / gateway", flush=True)
+                    else:
+                        print("model errors in 5 episodes in a row, but Ollama answers: timeouts, continuing",
+                              flush=True)
+                        consecutive_errors = 0
 
     summary = {"run_id": run_id, "suite": f"workspace {BENCHMARK_VERSION}", "attack": args.attack,
                "model": chat.model, "ollama_version": chat.version(), "code_version": os.environ.get("GIT_COMMIT", "unknown"),

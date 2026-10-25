@@ -99,5 +99,23 @@ class TraceDirLoggerTests(unittest.TestCase):
         self.assertIsNone(getattr(Logger.get(), "logdir", None))
 
 
+@unittest.skipIf(get_suite is None, "agentdojo not installed")
+class OutageTests(unittest.TestCase):
+    """A streak of timeouts on slow tasks must not abort the run; an unreachable Ollama must."""
+
+    def test_outage_only_when_ollama_does_not_answer(self):
+        from run_agentdojo import outage
+
+        class Chat:
+            def __init__(self, v):
+                self.v = v
+
+            def version(self):
+                return self.v
+
+        self.assertFalse(outage(Chat("0.40.10")))
+        self.assertTrue(outage(Chat("unknown")))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -25,7 +25,7 @@ Target: 12 main slides in about 12 minutes, plus backups. Speaker notes go in ea
 | B4 | Backup | Attack success by channel / goal (held-out) | fig2 heldout | 15 / 20 |
 | B5 | Backup | Failure analysis: which rule fired | block_reasons_heldout | 18 |
 | B6 | Backup | Cost per episode | final_tables cost columns | 21 |
-| B7 | Backup | Safety and ethics | unchanged + "AI assistant never saw held-out attacks" | 22 |
+| B7 | Backup | Safety and ethics | unchanged + disclosure: the AI assistant saw the team-written attacks after the freeze and edited target-email names in 8 (no defense change after) | 22 |
 | B8 | Backup | Live demo fallback | demo.py --oracle output for attack-g2-multiturn-1-research | new (table slide) |
 
 Dropped from the interim: 7 (three ways to defend: merged into 4), 10 (rerun), 11 (one real gap, one bug: now history), 13 (plan).

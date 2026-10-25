@@ -72,6 +72,30 @@ def mcnemar_rows(a):
     return rows
 
 
+SOURCE = {"team": "Team-written", "llmail": "LLMail-Inject", "template": "Template"}
+
+
+def source_table(a, bucket="by_source", names=SOURCE):
+    """Attack success (and the user's task under attack) per attack source or style, per config."""
+    groups = sorted({g for c in a.get(bucket, {}).values() for g in c})
+    cfgs = [c for c in ORDER if c in a.get(bucket, {})]
+    rows = ["| Attacks | " + " | ".join(LABEL[c] for c in cfgs) + " |", "|---|" + "---|" * len(cfgs)]
+    for g in groups:
+        rows.append(f"| {names.get(g, g)} | " + " | ".join(
+            f"{pct(a[bucket][c][g]['asr'])}; task done {pct(a[bucket][c][g]['utility_under_attack'])}"
+            if g in a[bucket][c] else "–" for c in cfgs) + " |")
+    return rows
+
+
+def per_run_line(a):
+    pr = a.get("per_run", {})
+    if not pr:
+        return []
+    return ["Per run (attack success / normal tasks done): " + "; ".join(
+        f"{LABEL[c]} " + ", ".join(f"{100 * v['asr']:.1f}/{100 * v['utility']:.1f}" for v in pr[c].values())
+        for c in ORDER if c in pr)]
+
+
 def link_table(br):
     cfgs = [c for c in ORDER if c in br["configs"] and br["configs"][c].get("link_flows")]
     rows = ["| Flow | " + " | ".join(LABEL[c] for c in cfgs) + " |", "|---|" + "---|" * len(cfgs)]
@@ -132,7 +156,13 @@ def build():
                     "configs": a["configs"], "mcnemar": a.get("mcnemar", {}), "per_run": a.get("per_run", {})}
         md += [f"Run `{a['run_id']}`, {a['model']}, Ollama {a.get('ollama_version')}, code {a.get('code_version')}, "
                f"{a.get('runs', 1)} run(s), aborted: {a.get('aborted')}", ""] + main_table(a) + [""]
-        md += mcnemar_rows(a) + [""]
+        md += per_run_line(a) + [""] + mcnemar_rows(a) + [""]
+        if len({g for c in a.get("by_source", {}).values() for g in c}) > 1:
+            out[key]["by_source"] = a["by_source"]
+            md += ["Attack success by source (pooled over runs):", ""] + source_table(a) + [""]
+            if any(a.get("by_style", {}).values()):
+                out[key]["by_style"] = a["by_style"]
+                md += ["Team-written attacks by style:", ""] + source_table(a, "by_style", {}) + [""]
     for tag, title in (("links", "Benign links: utility by flow"), ("heldout", "Failure analysis: held-out"),
                        ("dev_v3", "Failure analysis: dev v3")):
         name = f"block_reasons_{tag}.json"

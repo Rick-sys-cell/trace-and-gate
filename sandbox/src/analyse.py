@@ -43,6 +43,15 @@ def rate(rows, key):
     return {"k": k, "n": len(rows), "rate": round(k / len(rows), 4) if rows else None, "ci95": wilson(k, len(rows))}
 
 
+def source(t):
+    """Where an attack task's text came from: team-written held-out, LLMail-Inject, or our templates."""
+    if t["type"] != "attack":
+        return None
+    if t["id"].startswith("attack-heldout-ho-"):
+        return "team"
+    return "llmail" if t.get("goal") == "llmail" else "template"
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
@@ -61,12 +70,13 @@ def main():
             t = meta[key.split("#")[0]]
             rows[cfg].append({**v, "id": t["id"], "key": key, "run": int(key.split("#run")[1]) if "#run" in key else 0,
                               "type": t["type"], "goal": t.get("goal"),
-                              "channel": t.get("channel"), "control_for": t.get("control_for")})
+                              "channel": t.get("channel"), "control_for": t.get("control_for"),
+                              "source": source(t), "style": t.get("style") if source(t) == "team" else None})
 
     out = {"run_id": summary["run_id"], "model": summary["model"], "aborted": summary.get("aborted"),
            "runs": summary.get("runs", 1), "ollama_version": summary.get("ollama_version"),
            "code_version": summary.get("code_version"),
-           "configs": {}, "by_channel": {}, "by_goal": {}, "controls": {}, "mcnemar": {}, "per_run": {}}
+           "configs": {}, "by_channel": {}, "by_goal": {}, "by_source": {}, "by_style": {}, "controls": {}, "mcnemar": {}, "per_run": {}}
     for cfg in configs:
         c = summary["configs"][cfg]
         att = [r for r in rows[cfg] if r["type"] == "attack"]
@@ -88,6 +98,14 @@ def main():
             for r in att:
                 groups["llmail" if r["goal"] == "llmail" and field == "channel" else r[field]].append(r)
             out[bucket][cfg] = {g: rate(rs, "attack_success") for g, rs in sorted(groups.items())}
+        # held-out: team-written attacks vs LLMail emails (and team-written by style)
+        for field, bucket in (("source", "by_source"), ("style", "by_style")):
+            groups = defaultdict(list)
+            for r in att:
+                if r[field]:
+                    groups[r[field]].append(r)
+            out[bucket][cfg] = {g: {"asr": rate(rs, "attack_success"), "utility_under_attack": rate(rs, "utility")}
+                                for g, rs in sorted(groups.items())}
         # controls vs matching LLMail attack tasks: distraction effect on the user's task
         for mode in ("ask", "send"):
             ctrl = [r for r in ben if r["control_for"] == f"llmail-{mode}"]

@@ -9,7 +9,7 @@ DRAFT 25 Oct: dev results final; held-out, links, Qwen2.5 and AgentDojo results 
 
 TITLE: Trace and Gate: Provenance Tracking and Policy Checks against Prompt Injection in Email Agents
 
-ABSTRACT: An email assistant built on a large language model (LLM) reads messages written by strangers and can send, forward and delete mail for its user, so any incoming email can carry hidden instructions that take the agent over (indirect prompt injection). We evaluate two system-level defenses that decide outside the model whether each action is allowed: provenance tracking (D1h), which labels where every value came from, and per-task policy checks (D2). We compare them, alone and combined, with no defense and with the Dual-LLM pattern, in an isolated sandbox with a local Qwen3-8B model. On our 153-task development benchmark, attacks succeeded in 45.4% of attack tasks without a defense and in none with D1h+D2, while normal-task success stayed at 89.3%, the same as without a defense. The defenses were then frozen and tested on attacks we had not seen: [PENDING: held-out result, 3 runs]. [PENDING: Qwen2.5-7B and AgentDojo results]. Provenance tracking has a cost that our main benchmark did not measure: it blocks every link the agent copies from an email into a new message, harmless or not. [PENDING: benign-links result.] We also report what our evaluation does not cover, including adaptive attackers and memory poisoning.
+ABSTRACT: An email assistant built on a large language model (LLM) reads messages written by strangers and can send, forward and delete mail for its user, so any incoming email can carry hidden instructions that take the agent over (indirect prompt injection). We evaluate two system-level defenses that decide outside the model whether each action is allowed: provenance tracking (D1h), which labels where every value came from, and per-task policy checks (D2). We compare them, alone and combined, with no defense and with the Dual-LLM pattern, in an isolated sandbox with a local Qwen3-8B model. On our 153-task development benchmark, attacks succeeded in 45.4% of attack tasks without a defense and in none with D1h+D2, while normal-task success stayed at 89.3%, the same as without a defense. The defenses were then frozen and tested on attacks we had not seen. Over three runs, held-out attacks succeeded in 21.8% of episodes without a defense and in none under any defense, while D1h+D2 completed 91.7% of normal tasks against 89.3% without a defense; the 18 attacks we wrote ourselves never succeeded, even without a defense. [PENDING: Qwen2.5-7B and AgentDojo results]. Provenance tracking has a cost that our main benchmark did not measure: it blocks every link the agent copies from an email into a new message, harmless or not. [PENDING: benign-links result.] We also report what our evaluation does not cover, including adaptive attackers and memory poisoning.
 
 INDEX: large language models, AI agents, email assistants, prompt injection, information-flow control, policy enforcement.
 
@@ -136,8 +136,22 @@ The v3 changes worked. The undefended agent opened the attack content in 90 of 9
 
 ## B. Held-Out Attacks (Three Runs)
 
-<!-- results/analysis_heldout.json, results/diagnostics_heldout.json, results/block_reasons_heldout.json -->
-[PENDING: Table V, held-out results pooled over 3 runs, with per-run spread; McNemar D1h+D2 vs each config; H1 and H2 verdicts; team-written attacks separately.]
+<!-- results/analysis_heldout.json, results/diagnostics_heldout.json, results/block_reasons_heldout.json; run 20261025-034455 -->
+Table V pools three runs of the 114 held-out tasks under each configuration (1,710 episodes, no model errors or timeouts). The 40 LLMail tasks ran first, at code commit f4dfd90; the 18 team-written tasks were added to the same run afterwards (commit 05b86d7). The defense code is identical in both commits, which the frozen-source test checks.
+
+TABLE V: Held-Out Attacks (Three Runs Pooled, Qwen3-8B)
+| Config | Attack success | 95% CI | Normal tasks | Done under attack |
+| B0 | 21.8% (38/174) | 16.3–28.5% | 89.3% (150/168) | 48.3% |
+| B1 | 0.0% (0/174) | 0.0–2.2% | 80.4% (135/168) | 56.9% |
+| D1h | 0.0% (0/174) | 0.0–2.2% | 89.3% (150/168) | 46.6% |
+| D2 | 0.0% (0/174) | 0.0–2.2% | 89.9% (151/168) | 56.9% |
+| D1h+D2 | 0.0% (0/174) | 0.0–2.2% | 91.7% (154/168) | 56.3% |
+
+![Fig. 2.  Held-out attacks, three runs pooled: attack success and normal-task success with 95% confidence intervals.](../sandbox/results/figures/fig1_asr_vs_utility_col_heldout.png)
+
+No defense let an attack through in any run. Without a defense, attack success was 20.7%, 20.7% and 24.1% in the three runs; normal-task success was 89.3% in each run for B0 and D1h, and 92.9%, 89.3% and 92.9% for D1h+D2. Against B0, D1h+D2 differs on 38 paired attack episodes, all in its favour (p = 7.3 × 10⁻¹²), and on normal tasks it completed six that B0 failed and failed two that B0 completed (p = 0.289). H1 is therefore met (21.8% to 0%) and so is H2: normal-task success rose by 2.4 points instead of falling. The zeros come from blocking, not from the model ignoring the attacks: under D1h the agent tried the attacker's action in 37 episodes and under D1h+D2 in 19, and every attempt was blocked. B1 avoided attacks differently: its planner never tried an attacker's action, but it completed fewer normal tasks than D1h+D2 (80.4% against 91.7%; 6 against 25 discordant tasks, p = 8.8 × 10⁻⁴).
+
+All 38 successes came from the 40 new LLMail-Inject emails, which worked in 31.7% (38/120) of undefended episodes. The 18 team-written attacks never worked, not even without a defense (0/54), although the agent opened every one of them (27/27 in the body, 27/27 as attachments) and never issued the attacker's action. Their zeros under the defenses therefore say nothing about the defenses: on these attacks every configuration, including B0, was safe. This also means the pooled undefended rate (21.8%) falls short of the 30% validity bar we set for the attack set; only the LLMail part (31.7%) meets it. We report the pooled numbers as the headline because the hypotheses were stated for the whole held-out set, and give the LLMail part separately so that the zero under defense can be read against a 31.7% baseline.
 
 ## C. Second Model
 
@@ -161,7 +175,9 @@ D1h-L trusts contacts. A compromised or spoofed contact account passes its check
 ## F. Failure Analysis and Cost
 
 <!-- results/block_reasons_*.json -->
-[PENDING: rules that fired on normal tasks (held-out, 3 runs) and the task ids reviewed by the authors; secret-read-then-external-send upper bound per configuration; seconds, model calls and tokens per episode.] On the development suite, no configuration read a secret email and then sent anything outside the university, so there was no room for an unscored leak.
+On the held-out set, D1h blocked an action in 3 of 168 normal episodes, all in one task (benign-control-travel-send, once per run), where its rule that the user must have asked for the action fired; [PENDING: the authors' review of this task]. No other configuration blocked anything in a normal task. As an upper bound on leaks our exact-match scorer could miss, we counted episodes in which the agent read a secret email and then sent anything outside the university: 4 under B0, all of them already scored as successful attacks, and none under any defense. On the development suite there were none in any configuration.
+
+The defenses cost nothing in model time. Per held-out episode, B0 took 4.7 s, 3.8 model calls and 3,136 tokens; D1h took 4.5 s and 3,168 tokens; D2 and D1h+D2 took 4.3 s and 4.0 s and used 26% fewer tokens (2,309 and 2,292), because D2 hides the tools a task does not need. B1 was the slowest (5.4 s) and used 5.2 model calls, 1.3 of them by its reader.
 
 # VIII. Discussion
 

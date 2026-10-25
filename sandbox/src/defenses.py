@@ -5,6 +5,8 @@
   d1    ProvenanceDefense automatic provenance / taint tracking (FIDES, PACT, ROPE lineage)
   d2    PolicyDefense     hand-written per-task policy checks (Progent, ROPE lineage)
   d1d2  CombinedDefense   D1 and D2 together
+  d1h / d1hd2             D1 with sender addresses mentionable (8 Oct), and with D2
+  d1hl / d1hld2           exploratory, post-freeze (25 Oct): D1h that lets Alex share links from contacts' emails
 
 See Prompt_Injection_Proposal_C.md section V and Interim_Report.md section IV.
 """
@@ -300,6 +302,63 @@ class CombinedHeaderDefense(CombinedDefense):
 
 
 # ---------------------------------------------------------------------------
+# D1h-L: exploratory, added 25 Oct AFTER the freeze (git tag defenses-frozen-v1).
+# Everything above is unchanged (tests/test_frozen.py); held-out headline results use d1hd2.
+# ---------------------------------------------------------------------------
+LINK_REQUEST_RE = re.compile(r"\b(?:links?|urls?|website)\b")
+
+
+class ProvenanceLinkDefense(ProvenanceHeaderDefense):
+    """D1h-L: D1h, except that a link copied from an email may go out when Alex asked to share
+    a link from that email ("send Bob the link from my landlord's email"). D1h blocks every
+    such link (rule 3). A URL from untrusted text is allowed only if all hold:
+    (a) Alex's text asks for a link;
+    (b) the URL is in an email Alex named: by id, subject, sender address or a contact's name;
+    (c) that email's sender is a contact or an address Alex typed, and the email is not secret.
+    Everything else is checked exactly as in D1h. Known gap: a compromised or spoofed contact
+    account passes (c), as it already passes D1h's reply-target rule."""
+
+    name = "d1hl"
+
+    def check(self, tool, args, ctx):
+        if tool in STATE_CHANGING:
+            shared = self._shareable_urls(ctx)
+            if shared:  # hide shareable links from rule 3; all other rules see the same args
+                args = {k: self._mask(v, shared) if k in ("subject", "body", "title") else v
+                        for k, v in args.items()}
+        return super().check(tool, args, ctx)
+
+    def _shareable_urls(self, ctx) -> set[str]:
+        user = self._user_text(ctx)
+        if not LINK_REQUEST_RE.search(user):
+            return set()
+        world = ctx["world"]
+        trusted = set(EMAIL_RE.findall(user)) | {_addr(a) for a in world.contacts.values()}
+        named = {_addr(a) for n, a in world.contacts.items()
+                 if any(len(w) >= 3 and re.search(rf"\b{re.escape(w)}\b", user) for w in n.lower().split())}
+        urls = set()
+        for e in world.inbox:
+            sender = _addr(e["from"])
+            if e.get("sensitivity") == "secret" or sender not in trusted:
+                continue
+            if sender in named or self._email_named(world, e["id"], user):
+                text = f"{e['body']}\n{e.get('attachment', '')}".lower()
+                urls |= {u.rstrip(".,") for u in URL_RE.findall(text)}
+        return urls
+
+    @staticmethod
+    def _mask(text, urls):
+        return URL_RE.sub(lambda m: " " if m.group(0).lower().rstrip(".,") in urls else m.group(0), str(text))
+
+
+class CombinedLinkDefense(CombinedDefense):
+    """D1h-L + D2 (exploratory, post-freeze)."""
+
+    name = "d1hld2"
+    d1_class = ProvenanceLinkDefense
+
+
+# ---------------------------------------------------------------------------
 # B1: Dual-LLM (quarantined reader)
 # ---------------------------------------------------------------------------
 READER_SYSTEM = (
@@ -390,7 +449,8 @@ class DualLLMDefense(NoDefense):
 
 
 DEFENSES = {"b0": NoDefense, "b1": DualLLMDefense, "d1": ProvenanceDefense, "d1h": ProvenanceHeaderDefense,
-            "d2": PolicyDefense, "d1d2": CombinedDefense, "d1hd2": CombinedHeaderDefense}
+            "d2": PolicyDefense, "d1d2": CombinedDefense, "d1hd2": CombinedHeaderDefense,
+            "d1hl": ProvenanceLinkDefense, "d1hld2": CombinedLinkDefense}
 
 
 def get_defense(name: str, llm=None):

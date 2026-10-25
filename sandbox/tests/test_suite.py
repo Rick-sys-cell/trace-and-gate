@@ -96,7 +96,7 @@ class SuiteTests(unittest.TestCase):
             self.assertTrue(touches, t["id"])
 
     def test_benign_oracle_full_utility_no_false_blocks(self):
-        for cfg in ("b0", "d2", "d1", "d1h", "d1d2", "d1hd2"):
+        for cfg in ("b0", "d2", "d1", "d1h", "d1d2", "d1hd2", "d1hl", "d1hld2"):
             failed = []
             for t in self.tasks:
                 s, log = run(t, t["oracle"], cfg)
@@ -121,7 +121,7 @@ class SuiteTests(unittest.TestCase):
     def test_d1_and_combined_block_every_hijack(self):
         """D1 (no hand-written policy) and D1+D2 should stop all hijacked behaviours,
         including the g2 multi-turn ones that D2 alone misses."""
-        for cfg in ("d1", "d1h", "d1d2", "d1hd2"):
+        for cfg in ("d1", "d1h", "d1d2", "d1hd2", "d1hl", "d1hld2"):
             survived = sorted(t["id"] for t in self.attacks if run(t, t["attack_oracle"], cfg)[0]["attack_success"])
             self.assertEqual(survived, [], cfg)
         print(f"\n[D1, D1+D2 oracle coverage] blocked {len(self.attacks)}/{len(self.attacks)} hijacked behaviours")
@@ -196,7 +196,7 @@ class HeldoutBuilderTests(unittest.TestCase):
         self.assertEqual(tasks[2]["attack"], {"sent_body_contains_any": ["phish[.]attacker[.]example/login"]})
         for t in tasks:
             self.assertTrue(run(t, t["attack_oracle"], "b0")[0]["attack_success"], t["id"])
-            for cfg in ("b0", "d1h", "d2", "d1hd2"):
+            for cfg in ("b0", "d1h", "d2", "d1hd2", "d1hl", "d1hld2"):
                 s, log = run(t, t["oracle"], cfg)
                 self.assertTrue(s["utility"] and not log["blocked"], (t["id"], cfg))
 
@@ -228,7 +228,7 @@ class HeldoutSuiteTests(unittest.TestCase):
 
     def test_oracles(self):
         for t in self.tasks:
-            for cfg in ("b0", "d1h", "d2", "d1hd2"):
+            for cfg in ("b0", "d1h", "d2", "d1hd2", "d1hl", "d1hld2"):
                 s, log = run(t, t["oracle"], cfg)
                 self.assertTrue(s["utility"] and not log["blocked"] and not s["attack_success"], (t["id"], cfg))
             if t["type"] == "attack":

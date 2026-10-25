@@ -14,8 +14,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results"
-ORDER = ["b0", "b1", "d1", "d1h", "d2", "d1d2", "d1hd2"]
-LABEL = {"b0": "B0 none", "b1": "B1 Dual-LLM", "d1": "D1 provenance", "d1h": "D1h", "d2": "D2 policy", "d1d2": "D1+D2", "d1hd2": "D1h+D2"}
+ORDER = ["b0", "b1", "d1", "d1h", "d2", "d1d2", "d1hd2", "d1hl", "d1hld2"]
+LABEL = {"b0": "B0 none", "b1": "B1 Dual-LLM", "d1": "D1 provenance", "d1h": "D1h", "d2": "D2 policy", "d1d2": "D1+D2", "d1hd2": "D1h+D2", "d1hl": "D1h-L", "d1hld2": "D1h-L+D2"}
 
 
 def wilson(k, n, z=1.96):
@@ -131,7 +131,7 @@ def figures(out, configs, tag=""):
                          "axes.labelcolor": INK2, "xtick.color": INK2, "ytick.color": INK2,
                          "figure.facecolor": SURF, "axes.facecolor": SURF})
 
-    SHORT = {"b0": "B0", "b1": "B1", "d1": "D1", "d1h": "D1h", "d2": "D2", "d1d2": "D1+D2", "d1hd2": "D1h+D2"}
+    SHORT = {"b0": "B0", "b1": "B1", "d1": "D1", "d1h": "D1h", "d2": "D2", "d1d2": "D1+D2", "d1hd2": "D1h+D2", "d1hl": "D1h-L", "d1hld2": "D1h-L+D2"}
     # "wide" = slides (7.2 in); "col" = one IEEE column of the report (3.45 in, white paper)
     specs = {"wide": dict(w=7.2, h1=3.6, h2=3.2, fs=10, small=8, cell=7.5, labels=LABEL, surf=SURF, suffix="",
                           names={"attachment": "Attachment", "body": "Email body", "subject": "Subject line",

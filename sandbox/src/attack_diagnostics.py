@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 INJ_ID = 50
 ATTACKER_ADDRS = {"records@attacker.example", "contact@contact.com"}
 PHISH_MARKER = "phish.attacker.example"
-ORDER = ["b0", "b1", "d1", "d1h", "d2", "d1d2", "d1hd2"]
+ORDER = ["b0", "b1", "d1", "d1h", "d2", "d1d2", "d1hd2", "d1hl", "d1hld2"]
 
 
 def wilson(k, n, z=1.96):

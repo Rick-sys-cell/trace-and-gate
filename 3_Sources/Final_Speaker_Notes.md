@@ -46,9 +46,9 @@ Key line: Zero held-out attacks got through, and the attacks that worked were re
 
 ## 8. Does it carry over? A second model and AgentDojo
 
-Does this carry over? (pause) First, a second model family: Qwen2.5-7B on the same held-out set, one run. With no defense 29.3% of attacks worked; with a defense, at most 0.0%. (pause) Second, AgentDojo's workspace suite, a different benchmark with its own tools and attack. One caveat: AgentDojo has no per-task policies, so D2's policy comes from the task's ground truth. That makes D2 an upper bound there.
+Does this carry over? (pause) First, a second model family: Qwen2.5-7B on the same held-out set, one run. With no defense 29.3% of attacks worked; with a defense, at most 0.0%. (pause) Second, AgentDojo's workspace suite, a different benchmark with its own tools and attack. Its stock attack almost never worked on our model: 2 of 160 pairs with no defense, so this run cannot show protection. What it does show is cost: the defenses ran unchanged on tasks we did not write, and D1h+D2 completed 30.0% of tasks against 27.5% without a defense; Dual-LLM managed 12.5%. One caveat: D2's policy there comes from each task's ground truth, an upper bound.
 
-Key line: Same pattern on a second model and a second benchmark.
+Key line: Safe on a second model; on AgentDojo, no utility cost, but its attack was too weak here to test safety.
 
 ## 9. The cost we almost missed: harmless links
 

@@ -289,32 +289,39 @@ def s_generalise(s, D):
                      f"{100 * ac['asr']:.0f}%" if ac and ac["asr"] is not None else (PENDING if not ad else "–"),
                      f"{100 * ac['utility']:.0f}%" if ac and ac["utility"] is not None else (PENDING if not ad else "–")])
     fill_table(tables(s)[0], rows, widths=[1.2, 1.2, 1.2, 1.2, 1.2], row_height=0.42)
-    note = ("Qwen2.5-7B: held-out set, 1 run. AgentDojo: workspace suite, important_instructions attack; "
-            "its D2 policy comes from each task's ground-truth calls, so D2 there is an upper bound.")
+    note = ("Qwen2.5-7B: held-out set, 1 run. AgentDojo: workspace suite, "
+            + (f"{ad['user_tasks']} user tasks × {ad['pairs_per_task']} injection tasks, " if ad else "")
+            + "important_instructions attack; its D2 policy comes from each task's ground-truth calls, "
+            "so D2 there is an upper bound.")
     set_text(by_text(s, "Pilot → rerun"), note)
     below(by_text(s, "Qwen2.5-7B: held-out"), tables(s)[0])
     qb0 = q["configs"]["b0"] if q else None
     qw = worst_defended(q) if q else None
     set_text(by_text(s, "0% · 0 lost"), f"{pct(qb0['asr'])} → {pct(qw)}" if q else PENDING)
     set_text(by_text(s, "D1h blocked 34/34"), "Qwen2.5-7B: no defense vs worst defense")
-    if ad:
-        a0, a1 = ad["configs"].get("b0"), ad["configs"].get("d1hd2")
-        set_text(by_text(s, "33% → 34%"), f"{100 * a0['asr']:.0f}% → {100 * a1['asr']:.0f}%")
-    else:
-        set_text(by_text(s, "33% → 34%"), PENDING)
-    set_text(by_text(s, "No-defense rate held"), "AgentDojo: no defense vs D1h+D2")
-    if ad:
-        set_text(by_text(s, "2/20"), f"{ad['user_tasks']} × {ad['pairs_per_task']}")
-        set_text(by_text(s, "“Read and answer”"), "user tasks × injection tasks per config")
-    else:
-        set_text(by_text(s, "2/20"), PENDING)
-        set_text(by_text(s, "“Read and answer”"), "AgentDojo episodes per config")
+    # AgentDojo's stock attack barely works on a small model, so its callouts show that, and utility, not a
+    # "1% -> 0%" win the run cannot support
+    a0, a1 = (ad["configs"].get("b0"), ad["configs"].get("d1hd2")) if ad else (None, None)
+    k0 = round(a0["asr"] * a0["n_attack"]) if a0 else None
+    set_text(by_text(s, "33% → 34%"), f"{k0}/{a0['n_attack']}" if a0 else PENDING)
+    set_text(by_text(s, "No-defense rate held"), "AgentDojo, no defense: too few attacks worked to test safety")
+    set_text(by_text(s, "2/20"), f"{100 * a0['utility']:.0f}% → {100 * a1['utility']:.0f}%" if a0 and a1 else PENDING)
+    set_text(by_text(s, "“Read and answer”"), "AgentDojo utility: no defense vs D1h+D2")
+    def pct1(x):  # AgentDojo summaries hold plain rates, not {k, n, rate} dicts
+        return f"{100 * x:.1f}%"
+
+    ad_text = ("Second, AgentDojo's workspace suite, a different benchmark with its own tools and attack. Its stock "
+               f"attack almost never worked on our model: {k0} of {a0['n_attack']} pairs with no defense, so this run "
+               "cannot show protection. What it does show is cost: the defenses ran unchanged on tasks we did not "
+               f"write, and D1h+D2 completed {pct1(a1['utility'])} of tasks against {pct1(a0['utility'])} without a "
+               f"defense; Dual-LLM managed {pct1(ad['configs']['b1']['utility'])}. One caveat: D2's policy there "
+               "comes from each task's ground truth, an upper bound." if a0 and a1 and "b1" in ad["configs"]
+               else f"Second, AgentDojo's workspace suite: {PENDING}.")
     return ("Does this carry over? (pause) First, a second model family: Qwen2.5-7B on the same held-out set, one "
             f"run. With no defense {pct(qb0['asr'], 1) if q else PENDING} of attacks worked; with a defense, at most "
-            f"{pct(qw, 1) if q else PENDING}. (pause) Second, AgentDojo's workspace suite, a different benchmark "
-            "with its own tools and attack. One caveat: AgentDojo has no per-task policies, so D2's policy comes "
-            "from the task's ground truth. That makes D2 an upper bound there.\n\n"
-            "Key line: Same pattern on a second model and a second benchmark.")
+            f"{pct(qw, 1) if q else PENDING}. (pause) " + ad_text + "\n\n"
+            "Key line: Safe on a second model; on AgentDojo, no utility cost, but its attack was too weak here to "
+            "test safety.")
 
 
 def s_links(s, D):
@@ -420,8 +427,12 @@ def s_scorecard(s, D):
         recolor(tbl.cell(r, 2), "166534" if status.startswith("✓") else "B91C1C" if status.startswith("✗") else "B45309")
     co = carried_over(D)
     set_text(by_text(s, "Fix to confirm"), "D1h+D2 across test sets")
-    set_text(by_text(s, "Sender addresses"), "Attacks that worked: " + "; ".join(f"{n} {k}/{t}" for n, k, t in co) + "."
-             if co else PENDING)
+    ad = D.ds("agentdojo")
+    ad_b0 = ad["configs"].get("b0") if ad else None
+    ad_note = (f" (AgentDojo with no defense: {round(ad_b0['asr'] * ad_b0['n_attack'])}/{ad_b0['n_attack']}, "
+               "too few to test protection)") if ad_b0 and ad_b0["asr"] is not None else ""
+    set_text(by_text(s, "Sender addresses"), "Attacks that worked: " + "; ".join(f"{n} {k}/{t}" for n, k, t in co)
+             + ad_note + "." if co else PENDING)
     set_text(by_text(s, "The attack itself"), "What it costs")
     set_text(by_text(s, "“Read all and answer”"), "No extra model calls; D2 needs a policy per task; D1h blocks "
              "links copied from emails (D1h-L: exploratory fix).")

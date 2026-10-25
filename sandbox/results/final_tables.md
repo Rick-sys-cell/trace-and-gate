@@ -21,6 +21,13 @@ Run `20261024-135826`, qwen3:8b, Ollama 0.40.9, code b22e43f, 1 run(s), aborted:
 - D1h+D2 vs D1h (paired episodes where only one succeeded): attacks succeeded only under D1h 0, only under D1h+D2 0 (p = 1.0); normal tasks done only under D1h 2, only under D1h+D2 2 (p = 1.0)
 - D1h+D2 vs D2 (paired episodes where only one succeeded): attacks succeeded only under D2 0, only under D1h+D2 0 (p = 1.0); normal tasks done only under D2 1, only under D1h+D2 1 (p = 1.0)
 
+Attack success by source (pooled over runs):
+
+| Attacks | B0 none | B1 Dual-LLM | D1h | D2 | D1h+D2 |
+|---|---|---|---|---|---|
+| LLMail-Inject | 32.5% (13/40); task done 37.5% (15/40) | 0.0% (0/40); task done 47.5% (19/40) | 0.0% (0/40); task done 35.0% (14/40) | 0.0% (0/40); task done 45.0% (18/40) | 0.0% (0/40); task done 35.0% (14/40) |
+| Template | 54.4% (31/57); task done 61.4% (35/57) | 0.0% (0/57); task done 73.7% (42/57) | 0.0% (0/57); task done 40.4% (23/57) | 0.0% (0/57); task done 61.4% (35/57) | 0.0% (0/57); task done 61.4% (35/57) |
+
 ## Held-out (3 runs)
 Source: `results/analysis_heldout.json`
 
@@ -206,13 +213,13 @@ Source: `results/block_reasons_dev_v3.json`
 | D1h+D2 | 0.0% (0/56) | none | 0 (0) |
 
 ## AgentDojo workspace
-Source: `results/agentdojo_summary_20261025-075248.json`
+Source: `results/agentdojo_summary_20261025-075616.json`
 
-Run `agentdojo_20261025-075248`, suite workspace v1.2.2, attack `important_instructions`, 4 user tasks x 1 injection tasks, qwen3:8b, agentdojo 0.1.35, aborted: False **(timing spike, not the full run)**
+Run `agentdojo_20261025-075616`, suite workspace v1.2.2, attack `important_instructions`, 40 user tasks x 4 injection tasks, qwen3:8b, agentdojo 0.1.35, aborted: False
 
 | Config | Attack success | 95% CI | Utility (no attack) | Utility under attack | Normal tasks with a block | s/episode |
 |---|---|---|---|---|---|---|
-| B0 none | 0.0% (0/4) | 0.0–49.0% | 25.0% (1/4) | 25.0% | 0/4 | 10.7 |
-| B1 Dual-LLM | 0.0% (0/4) | 0.0–49.0% | 25.0% (1/4) | 25.0% | 0/4 | 7.9 |
-| D1h+D2 | 0.0% (0/4) | 0.0–49.0% | 50.0% (2/4) | 50.0% | 0/4 | 6.9 |
+| B0 none | 1.2% (2/160) | 0.3–4.4% | 27.5% (11/40) | 33.8% | 0/40 | 59.1 |
+| B1 Dual-LLM | 0.0% (0/160) | -0.0–2.3% | 12.5% (5/40) | 12.5% | 0/40 | 36.4 |
+| D1h+D2 | 0.0% (0/160) | -0.0–2.3% | 30.0% (12/40) | 28.7% | 7/40 | 63.8 |
 

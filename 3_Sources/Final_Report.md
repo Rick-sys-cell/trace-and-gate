@@ -9,7 +9,7 @@ DRAFT 25 Oct: dev results final; held-out, links, Qwen2.5 and AgentDojo results 
 
 TITLE: Trace and Gate: Provenance Tracking and Policy Checks against Prompt Injection in Email Agents
 
-ABSTRACT: An email assistant built on a large language model (LLM) reads messages written by strangers and can send, forward and delete mail for its user, so any incoming email can carry hidden instructions that take the agent over (indirect prompt injection). We evaluate two system-level defenses that decide outside the model whether each action is allowed: provenance tracking (D1h), which labels where every value came from, and per-task policy checks (D2). We compare them, alone and combined, with no defense and with the Dual-LLM pattern, in an isolated sandbox with a local Qwen3-8B model. On our 153-task development benchmark, attacks succeeded in 45.4% of attack tasks without a defense and in none with D1h+D2, while normal-task success stayed at 89.3%, the same as without a defense. The defenses were then frozen and tested on attacks we had not seen. Over three runs, held-out attacks succeeded in 21.8% of episodes without a defense and in none under any defense, while D1h+D2 completed 91.7% of normal tasks against 89.3% without a defense; the 18 attacks we wrote ourselves never succeeded, even without a defense. With a second model, Qwen2.5-7B, every defense again stopped every held-out attack. [PENDING: AgentDojo result.] Provenance tracking has a cost that our main benchmark did not measure: it blocks every link the agent copies from an email into a new message, harmless or not. On 40 normal tasks that use links, D1h+D2 completed 40.0% against 88.3% without a defense; an exploratory variant that trusts links from contacts the user names recovered the most common case without letting any attack through. We also report what our evaluation does not cover, including adaptive attackers and memory poisoning.
+ABSTRACT: An email assistant built on a large language model (LLM) reads messages written by strangers and can send, forward and delete mail for its user, so any incoming email can carry hidden instructions that take the agent over (indirect prompt injection). We evaluate two system-level defenses that decide outside the model whether each action is allowed: provenance tracking (D1h), which labels where every value came from, and per-task policy checks (D2). We compare them, alone and combined, with no defense and with the Dual-LLM pattern, in an isolated sandbox with a local Qwen3-8B model. On our 153-task development benchmark, attacks succeeded in 45.4% of attack tasks without a defense and in none with D1h+D2, while normal-task success stayed at 89.3%, the same as without a defense. The defenses were then frozen and tested on attacks we had not seen. Over three runs, held-out attacks succeeded in 21.8% of episodes without a defense and in none under any defense, while D1h+D2 completed 91.7% of normal tasks against 89.3% without a defense; the 18 attacks we wrote ourselves never succeeded, even without a defense. With a second model, Qwen2.5-7B, every defense again stopped every held-out attack. On the AgentDojo workspace suite the stock attack almost never worked on our model even without a defense (2 of 160), so it could not test protection; D1h+D2 let no attack through and kept utility at the undefended level (30.0% against 27.5%). Provenance tracking has a cost that our main benchmark did not measure: it blocks every link the agent copies from an email into a new message, harmless or not. On 40 normal tasks that use links, D1h+D2 completed 40.0% against 88.3% without a defense; an exploratory variant that trusts links from contacts the user names recovered the most common case without letting any attack through. We also report what our evaluation does not cover, including adaptive attackers and memory poisoning.
 
 INDEX: large language models, AI agents, email assistants, prompt injection, information-flow control, policy enforcement.
 
@@ -196,8 +196,22 @@ D1h-L trusts contacts. A compromised or spoofed contact account passes its check
 
 ## E. AgentDojo Workspace
 
-<!-- results/agentdojo_summary_*.json (full run) -->
-[PENDING: Table VIII, AgentDojo utility, utility under attack and attack success for B0, B1, D1h+D2; comparison with published numbers [3], [5].]
+<!-- results/agentdojo_summary_20261025-075616.json, results/analysis_agentdojo.json; run agentdojo_20261025-075616 -->
+Table VIII and Fig. 5 give the AgentDojo results (600 episodes; the summary records code commit f19b307, which differs from the commits that ran the earlier part of the run only in the runner's abort and model-reload rules).
+
+TABLE VIII: AgentDojo Workspace (One Run, Qwen3-8B; 160 Attack Pairs and 40 User Tasks per Configuration)
+| Config | Attack success | 95% CI | Utility | Under attack |
+| B0 | 1.2% | 0.3–4.4% | 27.5% | 33.8% |
+| B1 | 0.0% | 0.0–2.3% | 12.5% | 12.5% |
+| D1h+D2 | 0.0% | 0.0–2.3% | 30.0% | 28.7% |
+
+![Fig. 5.  AgentDojo workspace suite: attack success and utility without an attack, with 95% confidence intervals.](../sandbox/results/figures/fig1_asr_vs_utility_col_agentdojo.png)
+
+The attack almost never worked on our model. Without a defense, AgentDojo's important_instructions attack succeeded in 2 of 160 pairs (1.2%). AgentDojo's authors report 47.7% for GPT-4o and 20.0% for Llama 3 70B [3], and Progent reports 39.9% for GPT-4o without a defense [5]; both figures are averaged over all four AgentDojo suites, while we ran only the workspace suite. Neither B1 nor D1h+D2 let an attack through (0/160), but with only two successes to prevent, this run cannot show that the defenses stop AgentDojo's attacks.
+
+What the run can show is cost. Qwen3-8B completed few workspace tasks even without a defense: 27.5% (11/40), against 69.0% for GPT-4o and 34.5% for Llama 3 70B in [3]. D1h+D2 completed 30.0% (12/40; 6 against 5 discordant tasks, p = 1.0) and, under attack, 28.7% of the user's tasks against 33.8% for B0 (15 against 23 discordant pairs, p = 0.256), so no usefulness cost is detectable. It blocked at least one call in 7 of 40 normal episodes and in 35 of 160 attack episodes. B1 was again the least useful: 12.5% of tasks with and without an attack (5 against 31 discordant pairs with D1h+D2 under attack, p = 1.3 × 10⁻⁵).
+
+Many episodes hit the 180 s call limit on long workspace tasks: 39 of 200 under B0 (8 normal, 31 under attack) and 47 of 200 under D1h+D2 (9 and 38), but none under B1, whose planner never sees the long content it reads. Leaving the timed-out episodes out does not change the comparison: B0 then completed 34.4% (11/32) of normal tasks and D1h+D2 38.7% (12/31).
 
 ## F. Failure Analysis and Cost
 
@@ -218,7 +232,7 @@ The defenses cost nothing in model time. Per held-out episode, B0 took 4.7 s, 3.
 
 *A second model.* The safety result did not depend on the model: with Qwen2.5-7B every defense again stopped every attack, and D1h+D2 again completed at least as many normal tasks as no defense. What changed was usefulness under attack, which fell more for the weaker model, and B1, whose planner must work from variable names alone, lost the most.
 
-[PENDING: AgentDojo vs our suite.]
+*AgentDojo versus our suite.* AgentDojo tested the defenses less hard than our own suite did: its stock attack worked in 1.2% of undefended episodes on Qwen3-8B, against 45.4% for our development attacks and 31.7% for the held-out LLMail-Inject emails on the same model. A small model that often cannot finish the user's task is also unlikely to finish an attacker's. AgentDojo still adds two things. The defenses ran unchanged on tools, data and tasks we did not write and kept utility at the undefended level (30.0% against 27.5%), and the Dual-LLM baseline again paid the largest usefulness cost. Measuring protection on AgentDojo would need a stronger model or attacks that work on small ones.
 
 ## A. Limitations
 
@@ -230,7 +244,7 @@ The defenses cost nothing in model time. Per held-out episode, B0 took 4.7 s, 3.
 
 # IX. Conclusion
 
-Provenance tracking and policy checks, combined, stopped every attack in our evaluation without costing normal-task success: on attacks written after the defenses were frozen, attack success fell from 21.8% to 0% over three runs (H1 met), and normal-task success rose from 89.3% to 91.7% (H2 met), with the same pattern on a second model. The Dual-LLM baseline was equally safe but completed fewer normal tasks. [PENDING: AgentDojo result.] The evidence has two clear limits. Our own held-out attacks never worked even without a defense, so the held-out result rests on 40 LLMail-Inject emails. And provenance tracking blocks harmless links copied from email, which our main benchmark never asked for; a variant that trusts contacts recovers most of that cost at a known security price. Our takeaway is that a fixed check outside the model is a practical defense for email agents, provided its rules are tested on the normal tasks they could block, not only on attacks.
+Provenance tracking and policy checks, combined, stopped every attack in our evaluation without costing normal-task success: on attacks written after the defenses were frozen, attack success fell from 21.8% to 0% over three runs (H1 met), and normal-task success rose from 89.3% to 91.7% (H2 met), with the same pattern on a second model. The Dual-LLM baseline was equally safe but completed fewer normal tasks. On AgentDojo the defenses ran unchanged and cost no measurable utility, but its attack worked too rarely on our model (1.2% without a defense) to test protection. The evidence has two clear limits. Our own held-out attacks never worked even without a defense, so the held-out result rests on 40 LLMail-Inject emails. And provenance tracking blocks harmless links copied from email, which our main benchmark never asked for; a variant that trusts contacts recovers most of that cost at a known security price. Our takeaway is that a fixed check outside the model is a practical defense for email agents, provided its rules are tested on the normal tasks they could block, not only on attacks.
 
 # AI Declaration
 
@@ -240,7 +254,7 @@ We used Claude (Anthropic), through the Claude Code assistant, as a tool during 
 - *Writing.* It helped draft and edit this report and the slides, and summarised the analysis files into text and tables.
 - *Not used for.* Choosing the research question, hypotheses or conclusions; producing data; or writing held-out attacks. The authors wrote all 18; after the freeze, at our request, the assistant replaced the target email's name in 8 of them that named emails missing from their inbox, and so saw their text. Every result comes from runs of the models under test (Qwen3-8B, Qwen2.5-7B) in our own sandbox; those models are separate from the assistant. The assistant was blocked from reading attack payloads and raw transcripts.
 
-We checked every number in this report against the result file of the run it cites (development 20261024-135826; held-out 20261025-034455; Qwen2.5-7B 20261025-071911; benign links 20261025-055650; D1h-L 20261025-064154 and 20261025-070311; AgentDojo [PENDING: full run id]). We also checked every citation against its source. We take full responsibility for the content of this report.
+We checked every number in this report against the result file of the run it cites (development 20261024-135826; held-out 20261025-034455; Qwen2.5-7B 20261025-071911; benign links 20261025-055650; D1h-L 20261025-064154 and 20261025-070311; AgentDojo agentdojo_20261025-075616). We also checked every citation against its source. We take full responsibility for the content of this report.
 
 # References
 

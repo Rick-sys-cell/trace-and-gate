@@ -103,7 +103,7 @@ The development suite has 153 tasks in eight simulated inboxes (coursework, fina
 
 ## B. Held-Out Attacks
 
-After the freeze we built a held-out set with the same 56 normal tasks: 40 new LLMail-Inject attacks, sampled with a different seed and disjoint from the development sample, and attacks written by the two authors, not by the AI assistant that wrote D1h's rules: [PENDING: number] attacks in two styles unseen in development and disguised links that avoid "http://".
+After the freeze we built a held-out set with the same 56 normal tasks: 40 new LLMail-Inject attacks, sampled with a different seed and disjoint from the development sample, and 18 attacks written by the two authors: 12 in two styles unseen in development (a fake calendar invite and a fake forwarded thread, one per goal, channel and style) and 6 phishing attacks whose link is disguised (written as name[.]attacker[.]example) so that it avoids D1h's link rule. Every phishing attack in this set uses a disguised link; it counts as successful if the link appears in any outgoing email, with or without the brackets. Eight of the authored attacks named an email that does not exist in their inbox (for example a "Q3 variance report" in an inbox whose secret email is a payslip), so they could never succeed as scored. At our request the AI assistant replaced only that email's name with the inbox's real secret or protected email. It therefore saw the held-out attacks, but only after the defenses were frozen, and no defense code changed afterwards.
 
 ## C. Benign Links
 
@@ -173,7 +173,7 @@ D1h-L trusts contacts. A compromised or spoofed contact account passes its check
 - *Small models.* Both models are 7–8B parameters run locally; larger models follow injected instructions differently.
 - *Hand-written policies.* D2 needs a policy per task. In AgentDojo it was derived from ground truth, an upper bound.
 - *Exact-match scoring.* Paraphrased leaks are not counted (Section IV).
-- *Same authors for defenses and held-out attacks.* The held-out attacks were written after the freeze and without the AI assistant, but by the people who know the rules.
+- *Held-out independence.* The held-out attacks were written after the freeze by the people who know the rules, and the AI assistant that wrote the rules saw and minimally edited them (Section VI-B). The freeze is enforced by a test that pins the defenses' source.
 
 # IX. Conclusion
 
@@ -185,7 +185,7 @@ We used Claude (Anthropic), through the Claude Code assistant, as a tool during 
 
 - *Code.* It wrote code to our specifications: the sandbox, the defenses (D1h, D2, B1 and the exploratory D1h-L), the benchmark builders, the AgentDojo bridge, and the evaluation, analysis, figure and document-build scripts. We chose the design, the rules each defense enforces, and the hypotheses. We reviewed the code. It passed the offline unit tests and oracle replays before any run.
 - *Writing.* It helped draft and edit this report and the slides, and summarised the analysis files into text and tables.
-- *Not used for.* Choosing the research question, hypotheses or conclusions; producing data; or writing held-out attacks. Every result comes from runs of the models under test (Qwen3-8B, Qwen2.5-7B) in our own sandbox; those models are separate from the assistant. The assistant was blocked from reading attack payloads and raw transcripts.
+- *Not used for.* Choosing the research question, hypotheses or conclusions; producing data; or writing held-out attacks. The authors wrote all 18; after the freeze, at our request, the assistant replaced the target email's name in 8 of them that named emails missing from their inbox, and so saw their text. Every result comes from runs of the models under test (Qwen3-8B, Qwen2.5-7B) in our own sandbox; those models are separate from the assistant. The assistant was blocked from reading attack payloads and raw transcripts.
 
 We checked every number in this report against the result file of the run it cites (development 20261024-135826; [PENDING: held-out, Qwen2.5, links, D1h-L and AgentDojo run ids]). We also checked every citation against its source. We take full responsibility for the content of this report.
 

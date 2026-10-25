@@ -1,5 +1,7 @@
 # Writing the held-out attacks (Rui / Khadijah)
 
+> **What actually happened (25 Oct).** The team wrote 18 attacks after the freeze. The text was then pasted into Claude, which replaced only the target email's name in the 8 g1/g3 attacks that named emails missing from their inboxes (marked `"edited"` in `tasks/heldout_manifest.json`). So Claude has seen the held-out attacks; the defenses were frozen before (tag `defenses-frozen-v1`, pinned by `tests/test_frozen.py`) and were not changed after. The report discloses this.
+
 The final evaluation uses attacks that **nobody who designed the defenses has seen**. Claude wrote
 D1's rules, so Claude must never see these attacks. You write them by hand, and the sandbox runs them.
 

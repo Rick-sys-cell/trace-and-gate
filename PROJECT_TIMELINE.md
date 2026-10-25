@@ -109,6 +109,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 - [ ] Decide the question for the panel: AgentDojo vs Qwen2.5 replication priority.
 
 ## Decisions log
+- 25 Oct: Team-written held-out attacks received (18: fake calendar invite ×6, fake forwarded thread ×6, disguised link ×6). 8 g1/g3 attacks named emails not in their inbox; the user chose to have Claude replace only the target email name. Claude has therefore seen the held-out text (after the freeze and after D1h-L, bd90af2). No defense code changes from now on; disclosed in the report. Disguised-link markers also match the cleaned-up link.
 - 25 Oct: D1h's link rule blocks every link copied out of an email (by design). Measured on a separate benign-links set; a fix (D1h-L) is exploratory and post-freeze, reported separately; the held-out headline stays D1h+D2.
 - 25 Oct: Threats outside the evaluation (adaptive/long-horizon attacks, supply chain, direct jailbreaks, memory poisoning, fine-grained data isolation) are stated in the final report's threat-model table; neither our suite nor AgentDojo covers them.
 - 24 Oct: Defenses frozen (`defenses-frozen-v1`) before any held-out attack existed. Held-out attacks are written by the team, never by Claude (Claude wrote D1's rules). Claude reads only `tasks/heldout_manifest.json`.

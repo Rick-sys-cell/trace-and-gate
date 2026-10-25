@@ -181,7 +181,13 @@ The defenses cost nothing in model time. Per held-out episode, B0 took 4.7 s, 3.
 
 # VIII. Discussion
 
-[PENDING: what generalised from development to held-out; D1h vs D2 roles (D2 removes the attack surface, D1h catches content riding in authorised actions such as the multi-turn phishing reply); B1 comparison; link cost; AgentDojo vs our suite.]
+*What generalised.* The development result carried over to attacks written after the freeze: every defense again let no attack through, and D1h+D2 again lost no normal tasks. The held-out set is weaker than we planned, though. The undefended agent read every team-written attack and acted on none of them, so the evidence that the defenses generalise rests on the 40 new LLMail-Inject emails (38 successes in 120 undefended episodes, none in 480 defended ones). Writing attacks that work against a given model is itself hard; the LLMail emails were filtered from a large public competition for exactly that property, and ours were not.
+
+*Two checks, two jobs.* D2 and D1h stop attacks in different places. D2 hides every tool, recipient and email the task does not need, so most attacks have nothing to act with: under D2 the agent tried the attacker's action in 17 held-out episodes, against 37 under D1h. D1h needs no per-task policy and catches what D2 cannot see: attacker content inside an action the user did ask for, such as a phishing link added to an authorised reply (Section VII-A). Combined, they cost nothing measurable in normal-task success on either suite.
+
+*Against Dual-LLM.* B1 was as safe as D1h+D2 on both suites, so we cannot claim our defenses are safer. They are more useful: B1 completed 80.4% of normal tasks against 91.7% for D1h+D2 on the held-out set, because its planner never sees the email text it must act on. B1 also needs an extra model call per email read.
+
+[PENDING: link cost; second model; AgentDojo vs our suite.]
 
 ## A. Limitations
 

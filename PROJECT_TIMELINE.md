@@ -87,7 +87,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 ## Week 12 (2 – 8 Nov): write-up
 | # | Item | Owner | Status |
 |---|---|---|---|
-| 12.1 | Final report: draft `3_Sources/Final_Report.md` (all sections filled except AgentDojo §VII-E, its abstract/discussion/conclusion sentences, and the authors' review in §VII-F; 7 pages, 180 numbers checked, 0 unmatched). Build `tools/build_report_docx.py` → `4_Final_Submission/` (git-ignored); check `tools/check_numbers.py` | Both | ◐ |
+| 12.1 | Final report: draft `3_Sources/Final_Report.md` (all sections filled except AgentDojo §VII-E, its abstract/discussion/conclusion sentences, and the authors' review in §VII-F; no page limit (confirmed 25 Oct): 95% CI columns restored in Tables IV-VI, Figs. 3-4 added (held-out by channel, Qwen2.5), Fig. 5 AgentDojo after the run; 7 pages, 163 numbers checked, 0 unmatched). Build `tools/build_report_docx.py` → `4_Final_Submission/` (git-ignored); check `tools/check_numbers.py` | Both | ◐ |
 | 12.2 | Final slides: `tools/build_deck.py` builds `4_Final_Submission/Final_Presentation.pptx` (12 main + 10 backup) from the interim deck with every number read from the results, plus `3_Sources/Final_Speaker_Notes.md` (Rui 1–5, 11–12; Khadijah 6–10). Rehearsal ☐ | Both | ◐ |
 | 12.3 | Include AI declaration (`3_Sources/AI_Declaration.md`) in the final report; refresh its run IDs (add AgentDojo / Qwen2.5-7B runs if done). Interim version added 16 Oct (report §AI Declaration, before References) | Both | ☐ |
 

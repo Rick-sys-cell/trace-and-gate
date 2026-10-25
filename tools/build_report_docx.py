@@ -223,6 +223,13 @@ def figure(tpl, doc, image: Path):
         p.remove(r)
     p.append(drawing_run)
     holder._p.getparent().remove(holder._p)
+    ppr = p.find(qn("w:pPr"))
+    if ppr is None:
+        ppr = p.makeelement(qn("w:pPr"), {})
+        p.insert(0, ppr)
+    if ppr.find(qn("w:keepNext")) is None:  # keep the picture on the same page/column as its caption
+        style = ppr.find(qn("w:pStyle"))
+        ppr.insert(0 if style is None else list(ppr).index(style) + 1, ppr.makeelement(qn("w:keepNext"), {}))
     return p
 
 

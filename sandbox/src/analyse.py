@@ -138,7 +138,7 @@ def main():
         print(f"wrote analysis{tag}.json (no attack tasks, so no figures) for {configs}")
 
 
-def figures(out, configs, tag=""):
+def figures(out, configs, tag="", heatmap=True):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -193,12 +193,17 @@ def figures(out, configs, tag=""):
         fig.tight_layout()
         fig.savefig(figdir / f"fig1_asr_vs_utility{sp['suffix']}{tag}.png", facecolor=sp["surf"])
         plt.close(fig)
+        if not heatmap:  # AgentDojo summaries have no per-channel breakdown
+            continue
 
-        # Fig 2: heatmap, attack success by hiding place x config (sequential blue ramp)
-        chans = ["attachment", "body", "subject", "multiturn", "llmail"]
+        # Fig 2: heatmap, attack success by hiding place x config (sequential blue ramp); rows with no
+        # attacks in this suite (e.g. no subject-line attacks in the held-out set) are left out
+        chans = [ch for ch in ("attachment", "body", "subject", "multiturn", "llmail")
+                 if any(out["by_channel"][c].get(ch) for c in configs)]
         ramp = LinearSegmentedColormap.from_list("blue", ["#fcfcfb", "#cde2fb", "#86b6ef", "#3987e5", "#1c5cab", "#0d366b"])
         data = [[out["by_channel"][c].get(ch, {}).get("rate") or 0 for c in configs] for ch in chans]
-        fig, ax = plt.subplots(figsize=(sp["w"], sp["h2"]), dpi=200 if mode == "wide" else 300)
+        fig, ax = plt.subplots(figsize=(sp["w"], sp["h2"] * (0.4 + 0.6 * len(chans) / 5)),
+                               dpi=200 if mode == "wide" else 300)
         ax.imshow(data, cmap=ramp, vmin=0, vmax=1, aspect="auto")
         for i, ch in enumerate(chans):
             for j, c in enumerate(configs):

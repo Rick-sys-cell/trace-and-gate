@@ -120,53 +120,57 @@ All runs used Qwen3-8B through Ollama (temperature 0.3, at most 15 steps per tur
 ## A. Development Suite
 
 <!-- results/analysis_dev_v3.json, results/diagnostics_dev_v3.json, results/block_reasons_dev_v3.json; run 20261024-135826 -->
-Table IV shows one run of all 153 tasks under each configuration (765 episodes, no model errors); "under attack" is the share of attack tasks in which the user's own request was still completed.
+Table IV shows one run of all 153 tasks under each configuration (765 episodes, no model errors); "under attack" is the share of attack tasks in which the user's own request was still completed, and "95% CI" is the Wilson interval for attack success.
 
-TABLE IV: Development Suite v3 (One Run, Qwen3-8B)
-| Config | Attack success | Normal tasks | Under attack |
-| B0 | 45.4% (44/97) | 89.3% (50/56) | 51.5% |
-| B1 | 0.0% (0/97) | 80.4% (45/56) | 62.9% |
-| D1h | 0.0% (0/97) | 89.3% (50/56) | 38.1% |
-| D2 | 0.0% (0/97) | 89.3% (50/56) | 54.6% |
-| D1h+D2 | 0.0% (0/97) | 89.3% (50/56) | 50.5% |
+TABLE IV: Development Suite v3 (One Run, Qwen3-8B; 97 Attack and 56 Normal Tasks per Configuration)
+| Config | Attack success | 95% CI | Normal tasks | Under attack |
+| B0 | 45.4% | 35.8–55.3% | 89.3% | 51.5% |
+| B1 | 0.0% | 0.0–3.8% | 80.4% | 62.9% |
+| D1h | 0.0% | 0.0–3.8% | 89.3% | 38.1% |
+| D2 | 0.0% | 0.0–3.8% | 89.3% | 54.6% |
+| D1h+D2 | 0.0% | 0.0–3.8% | 89.3% | 50.5% |
 
 ![Fig. 1.  Development suite: attack success and normal-task success with 95% confidence intervals.](../sandbox/results/figures/fig1_asr_vs_utility_col_dev_v3.png)
 
-The v3 changes worked. The undefended agent opened the attack content in 90 of 97 attack tasks (77 in the pilot), and attack success rose from 33.0% in the pilot to 45.4%. The split multi-turn attacks, which never worked before, succeeded in 7 of 12 tasks, and LLMail attacks in 13 of 40. Every defense let through no attacks (95% CI 0–3.8%). Against B0, D1h+D2 differs on 44 paired attack tasks, all in its favour (p = 1.1 × 10⁻¹³); on normal tasks it completed two that B0 failed and failed two that B0 completed (p = 1.0). No defense blocked a single action in a normal task. Under D1h, the agent tried the attacker's action in 45 tasks, about as often as with no defense (44), and every attempt was blocked; D2 hides the tools an attack needs, so attempts fell to 8.
+The v3 changes worked. The undefended agent opened the attack content in 90 of 97 attack tasks (77 in the pilot), and attack success rose from 33.0% in the pilot to 45.4%. The split multi-turn attacks, which never worked before, succeeded in 7 of 12 tasks, and LLMail attacks in 13 of 40. No defense let an attack through. Against B0, D1h+D2 differs on 44 paired attack tasks, all in its favour (p = 1.1 × 10⁻¹³); on normal tasks it completed two that B0 failed and failed two that B0 completed (p = 1.0). No defense blocked a single action in a normal task. Under D1h, the agent tried the attacker's action in 45 tasks, about as often as with no defense (44), and every attempt was blocked; D2 hides the tools an attack needs, so attempts fell to 8.
 
 ## B. Held-Out Attacks (Three Runs)
 
 <!-- results/analysis_heldout.json, results/diagnostics_heldout.json, results/block_reasons_heldout.json; run 20261025-034455 -->
 Table V pools three runs of the 114 held-out tasks under each configuration (1,710 episodes, no model errors or timeouts). The 40 LLMail tasks ran first, at code commit f4dfd90; the 18 team-written tasks were added to the same run afterwards (commit 05b86d7). The defense code is identical in both commits, which the frozen-source test checks.
 
-TABLE V: Held-Out Attacks (Three Runs Pooled, Qwen3-8B)
-| Config | Attack success | Normal tasks | Under attack |
-| B0 | 21.8% (38/174) | 89.3% (150/168) | 48.3% |
-| B1 | 0.0% (0/174) | 80.4% (135/168) | 56.9% |
-| D1h | 0.0% (0/174) | 89.3% (150/168) | 46.6% |
-| D2 | 0.0% (0/174) | 89.9% (151/168) | 56.9% |
-| D1h+D2 | 0.0% (0/174) | 91.7% (154/168) | 56.3% |
+TABLE V: Held-Out Attacks (Three Runs Pooled, Qwen3-8B; 174 Attack and 168 Normal Episodes per Configuration)
+| Config | Attack success | 95% CI | Normal tasks | Under attack |
+| B0 | 21.8% | 16.3–28.5% | 89.3% | 48.3% |
+| B1 | 0.0% | 0.0–2.2% | 80.4% | 56.9% |
+| D1h | 0.0% | 0.0–2.2% | 89.3% | 46.6% |
+| D2 | 0.0% | 0.0–2.2% | 89.9% | 56.9% |
+| D1h+D2 | 0.0% | 0.0–2.2% | 91.7% | 56.3% |
 
 ![Fig. 2.  Held-out attacks, three runs pooled: attack success and normal-task success with 95% confidence intervals.](../sandbox/results/figures/fig1_asr_vs_utility_col_heldout.png)
 
-No defense let an attack through in any run (95% CI 0.0–2.2% for each; 16.3–28.5% for B0). Without a defense, attack success was 20.7%, 20.7% and 24.1% in the three runs; normal-task success was 89.3% in each run for B0 and D1h, and 92.9%, 89.3% and 92.9% for D1h+D2. Against B0, D1h+D2 differs on 38 paired attack episodes, all in its favour (p = 7.3 × 10⁻¹²), and on normal tasks it completed six that B0 failed and failed two that B0 completed (p = 0.289). H1 is therefore met (21.8% to 0%) and so is H2: normal-task success rose by 2.4 points instead of falling. The zeros come from blocking, not from the model ignoring the attacks: under D1h the agent tried the attacker's action in 37 episodes and under D1h+D2 in 19, and every attempt was blocked. B1 avoided attacks differently: its planner never tried an attacker's action, but it completed fewer normal tasks than D1h+D2 (80.4% against 91.7%; 6 against 25 discordant tasks, p = 8.8 × 10⁻⁴).
+No defense let an attack through in any run. Without a defense, attack success was 20.7%, 20.7% and 24.1% in the three runs; normal-task success was 89.3% in each run for B0 and D1h, and 92.9%, 89.3% and 92.9% for D1h+D2. Against B0, D1h+D2 differs on 38 paired attack episodes, all in its favour (p = 7.3 × 10⁻¹²), and on normal tasks it completed six that B0 failed and failed two that B0 completed (p = 0.289). H1 is therefore met (21.8% to 0%) and so is H2: normal-task success rose by 2.4 points instead of falling. The zeros come from blocking, not from the model ignoring the attacks: under D1h the agent tried the attacker's action in 37 episodes and under D1h+D2 in 19, and every attempt was blocked. B1 avoided attacks differently: its planner never tried an attacker's action, but it completed fewer normal tasks than D1h+D2 (80.4% against 91.7%; 6 against 25 discordant tasks, p = 8.8 × 10⁻⁴).
 
-All 38 successes came from the 40 new LLMail-Inject emails, which worked in 31.7% (38/120) of undefended episodes. The 18 team-written attacks never worked, not even without a defense (0/54), although the agent opened every one of them (27/27 in the body, 27/27 as attachments) and never issued the attacker's action. Their zeros under the defenses therefore say nothing about the defenses: on these attacks every configuration, including B0, was safe. This also means the pooled undefended rate (21.8%) falls short of the 30% validity bar we set for the attack set; only the LLMail part (31.7%) meets it. We report the pooled numbers as the headline because the hypotheses were stated for the whole held-out set, and give the LLMail part separately so that the zero under defense can be read against a 31.7% baseline.
+All 38 successes came from the 40 new LLMail-Inject emails (Fig. 3), which worked in 31.7% (38/120) of undefended episodes. The 18 team-written attacks never worked, not even without a defense (0/54), although the agent opened every one of them (27/27 in the body, 27/27 as attachments) and never issued the attacker's action. Their zeros under the defenses therefore say nothing about the defenses: on these attacks every configuration, including B0, was safe. This also means the pooled undefended rate (21.8%) falls short of the 30% validity bar we set for the attack set; only the LLMail part (31.7%) meets it. We report the pooled numbers as the headline because the hypotheses were stated for the whole held-out set, and give the LLMail part separately so that the zero under defense can be read against a 31.7% baseline.
+
+![Fig. 3.  Held-out attacks, three runs pooled: attack success by where the attack was hidden. The body and attachment rows are the team-written attacks.](../sandbox/results/figures/fig2_asr_by_channel_col_heldout.png)
 
 ## C. Second Model
 
 <!-- results/analysis_heldout_qwen25.json, results/diagnostics_heldout_qwen25.json, results/block_reasons_heldout_qwen25.json; run 20261025-071911 -->
-We repeated the held-out set once with Qwen2.5-7B, a model from the same family but a different generation, with the defenses unchanged (Table VI).
+We repeated the held-out set once with Qwen2.5-7B, a model from the same family but a different generation, with the defenses unchanged (Table VI, Fig. 4).
 
-TABLE VI: Held-Out Attacks, Qwen2.5-7B (One Run)
-| Config | Attack success | Normal tasks | Under attack |
-| B0 | 29.3% (17/58) | 66.1% (37/56) | 56.9% |
-| B1 | 0.0% (0/58) | 42.9% (24/56) | 0.0% |
-| D1h | 0.0% (0/58) | 71.4% (40/56) | 31.0% |
-| D2 | 0.0% (0/58) | 67.9% (38/56) | 32.8% |
-| D1h+D2 | 0.0% (0/58) | 73.2% (41/56) | 22.4% |
+TABLE VI: Held-Out Attacks, Qwen2.5-7B (One Run; 58 Attack and 56 Normal Tasks per Configuration)
+| Config | Attack success | 95% CI | Normal tasks | Under attack |
+| B0 | 29.3% | 19.2–42.0% | 66.1% | 56.9% |
+| B1 | 0.0% | 0.0–6.2% | 42.9% | 0.0% |
+| D1h | 0.0% | 0.0–6.2% | 71.4% | 31.0% |
+| D2 | 0.0% | 0.0–6.2% | 67.9% | 32.8% |
+| D1h+D2 | 0.0% | 0.0–6.2% | 73.2% | 22.4% |
 
-Qwen2.5-7B was the weaker assistant: undefended, it completed 66.1% of normal tasks against 89.3% for Qwen3-8B, and LLMail attacks worked in 42.5% (17/40) of its episodes. The team-written attacks again never worked (0/18). Every defense let no attack through (95% CI 0–6.2%), and D1h+D2 completed 73.2% of normal tasks against 66.1% for B0 (8 against 4 discordant tasks, p = 0.388), so H1 and H2 hold for this model as well, from one run. The zeros again come from blocking: the agent tried the attacker's action in 19 episodes under D1h and 10 under D1h+D2, and every attempt was blocked. Two results differ from Qwen3-8B. B1 completed only 42.9% of normal tasks (5 against 22 discordant tasks with D1h+D2, p = 1.5 × 10⁻³) and none of the user's tasks under attack. The defended agents also finished the user's own task under attack far less often than B0 (22.4% for D1h+D2 against 56.9%), so with this model the defenses keep the user safe but often not served when an attack is present.
+![Fig. 4.  Held-out attacks with Qwen2.5-7B, one run: attack success and normal-task success with 95% confidence intervals.](../sandbox/results/figures/fig1_asr_vs_utility_col_heldout_qwen25.png)
+
+Qwen2.5-7B was the weaker assistant: undefended, it completed 66.1% of normal tasks against 89.3% for Qwen3-8B, and LLMail attacks worked in 42.5% (17/40) of its episodes. The team-written attacks again never worked (0/18). No defense let an attack through, and D1h+D2 completed 73.2% of normal tasks against 66.1% for B0 (8 against 4 discordant tasks, p = 0.388), so H1 and H2 hold for this model as well, from one run. The zeros again come from blocking: the agent tried the attacker's action in 19 episodes under D1h and 10 under D1h+D2, and every attempt was blocked. Two results differ from Qwen3-8B. B1 completed only 42.9% of normal tasks (5 against 22 discordant tasks with D1h+D2, p = 1.5 × 10⁻³) and none of the user's tasks under attack. The defended agents also finished the user's own task under attack far less often than B0 (22.4% for D1h+D2 against 56.9%), so with this model the defenses keep the user safe but often not served when an attack is present.
 
 ## D. Benign Links and the Exploratory D1h-L
 

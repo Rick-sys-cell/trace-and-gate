@@ -813,8 +813,13 @@ def main():
         smoke.write_text(json.dumps(SMOKE_PAYLOAD, indent=1), encoding="utf-8")
     tasks = benign + attacks
     name = "email_suite.json" if VERSION == 1 else f"email_suite_v{VERSION}.json"
-    (HERE / "tasks" / name).write_text(json.dumps(tasks, indent=1), encoding="utf-8")
-    print(f"suite version {VERSION} -> tasks/{name}")
+    if not llmail_ids and (HERE / "tasks" / name).exists():
+        # fresh clone: keep the committed suite (it references the LLMail payloads, which tests then skip)
+        print(f"LLMail payloads not imported: kept the committed tasks/{name} "
+              f"(run benchmark/import_llmail.py to rebuild it)")
+    else:
+        (HERE / "tasks" / name).write_text(json.dumps(tasks, indent=1), encoding="utf-8")
+        print(f"suite version {VERSION} -> tasks/{name}")
 
     from collections import Counter
     print(f"benign={len(benign)} attack={len(attacks)} total={len(tasks)}")

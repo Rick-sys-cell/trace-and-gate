@@ -119,6 +119,7 @@ Tips:
 | `isolation_check`: *gateway reachable* WARN, or demo shows `llm_error` | Ollama is not running. Start it, run `ollama list`, then `docker compose restart llm-gateway`. |
 | `502` / `ConnectionError` right after starting | The model is still loading. Run the warm-up from section 4 and retry. |
 | `KeyError: 'tpl-...'` or *unknown task* | The attack emails were not generated. Run `python benchmark/build_suite.py --version 3`. |
+| `docker compose build` stops at *load local bake definitions* with `failed to execute bake: exit status 1` | Seen when the repo sits in a temp folder. Clone into Documents or Desktop instead, or run the build once with `BUILDX_BAKE_ENTITLEMENTS_FS=0` set (PowerShell: `$env:BUILDX_BAKE_ENTITLEMENTS_FS="0"`). |
 | `FileNotFoundError: C:/Program Files/Git/data/...` | You are in Git Bash. Use PowerShell, or prefix the command with `MSYS_NO_PATHCONV=1`. |
 | Docker out of memory / laptop freezes | Close other apps. On Windows, cap WSL in `%USERPROFILE%\.wslconfig` (`[wsl2]` then `memory=6GB`), run `wsl --shutdown`, and restart Docker. |
 | Very slow first answer | Normal: the first call loads the model into memory. Warm it up beforehand. |

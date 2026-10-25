@@ -102,10 +102,10 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 - [x] 24 Oct: `.wslconfig` caps WSL at 6 GB. Even so, the host ran critically low on memory during the dev run; close other apps during runs.
 - [x] 25 Oct: held-out attacks written (18) and run × 3. Team-written attacks never worked even undefended.
 - [ ] **Khadijah:** review held-out false-block task `benign-control-travel-send` (D1h, 3 episodes); add the verdict to report §VII-F.
-- [ ] **Both:** check the final date/time of the presentation and update `FOOTER` in `tools/build_deck.py` (now "Week 12, Nov 2026").
+- [x] Final presentation: Week 12, Friday 13 Nov 2026 (deck footer updated 25 Oct).
 - [ ] AgentDojo full run `agentdojo_20261025-075616` running in `run_queue3`; then `report_tables.py`, fill §VII-E (Table VIII), rebuild docx + deck.
 - [ ] **Rui + Khadijah:** add ≥6 benign link tasks to `sandbox/benchmark/tasks/links_manifest.json` (format in `docs/HELDOUT_AUTHORING.md`).
-- [ ] Turn off Ollama auto-update (tray settings). Every summary now records `ollama_version`.
+- [x] 25 Oct: Ollama auto-update turned off (stays on 0.40.10). Every summary records `ollama_version`.
 - [x] 25 Oct: fresh-clone test of `docs/DEMO_GUIDE.md` (oracle path); `--live` in the clone still to do.
 - [ ] Backup screen recording of `demo.py --live`.
 - [ ] Decide the question for the panel: AgentDojo vs Qwen2.5 replication priority.

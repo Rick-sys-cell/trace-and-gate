@@ -70,8 +70,8 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 | 10.0c | Rerun on suite v2, run 20261008-103942 (B0, D1, D1h, D2; 612 episodes, 0 errors): B0 34.0%; D1 0% (33/33 blocked) but 73.2% normal; **D1h 0% (34/34 blocked), 87.5% normal, 0 tasks lost vs B0**; D2 1.0%. Report §VI-B, deck v2 slide 10 | Rui (Claude) | ☑ |
 | 10.0d | Suite v3 (`email_suite_v3.json`, 153 tasks): LLMail emails carry a partner reference code the user asks for; requests no longer name the sender; controls mirror this. Offline tests: 68 (2 skip on the host) | Rui (Claude) | ☑ |
 | 10.0e | **Dev run on v3, run `20261024-135826`** (b0 b1 d1h d2 d1hd2, 765 episodes, 0 model errors, Ollama 0.40.9, code b22e43f). ASR: **B0 45.4% (44/97)**, B1 0%, D1h 0%, D2 0%, **D1h+D2 0% (CI 0–3.8%)**. Normal tasks: B0 89.3%, B1 80.4%, D1h 89.3%, D2 89.3%, **D1h+D2 89.3% (0 pts vs B0)**. McNemar D1h+D2 vs B0 on attacks: 44 vs 0, p = 1.1e-13. Exposure: read-and-answer 15/20 (was 2/20); multi-turn B0 7/12 (was 0). All pass criteria met. Dev suite, 1 run: confirm on held-out. Files: `results/analysis_dev_v3.json`, `diagnostics_dev_v3.json`, figures `*_dev_v3.png` | Rui (Claude) | ☑ |
-| 10.1 | Held-out set: 40 new LLMail attacks sampled 24 Oct (seed 4202, disjoint from dev) ☑; tooling `build_suite.py --heldout` ☑; **team-written attacks (2 unseen styles + 6 disguised links) ☐, see `docs/HELDOUT_AUTHORING.md`**; then 3 runs × 5 configs + Qwen2.5-7B ☐ | Both | ◐ |
-| 10.2 | AgentDojo workspace v1.2.2: bridge + runner built (`agentdojo_bridge.py`, `run_agentdojo.py`, agentdojo 0.1.35 in image). Oracle replay: B0 hijacked 57/60, D2/D1h/D1h+D2 0/60; D1h false-blocks 8/40 honest tasks. Still to do: timing spike, then B0/B1/D1h+D2 run | Rui (Claude) | ◐ |
+| 10.1 | Held-out set: 40 new LLMail attacks (seed 4202, disjoint from dev) + 18 team-written (`heldout_manifest.json`). **Run `20261025-034455` done** (114 tasks × 5 configs × 3 runs, 1,710 episodes, 0 errors; LLMail part code f4dfd90, team part resumed at 05b86d7, defenses identical). ASR **B0 21.8% (38/174)**, every defense **0/174**; normal B0 89.3%, B1 80.4%, D1h 89.3%, D2 89.9%, **D1h+D2 91.7%**. McNemar vs B0 38 vs 0, p = 7.3e-12; vs B1 normal 6 vs 25, p = 8.8e-4. H1 ✓, H2 ✓ (+2.4). **Team-written attacks 0/54 even under B0** (opened 54/54, never attempted), so the validity bar (≥30%) holds only for the LLMail part (31.7%). Qwen2.5-7B queued | Both | ◐ |
+| 10.2 | AgentDojo workspace v1.2.2: bridge + runner built (`agentdojo_bridge.py`, `run_agentdojo.py`, agentdojo 0.1.35 in image). Oracle replay: B0 hijacked 57/60, D2/D1h/D1h+D2 0/60; D1h false-blocks 8/40 honest tasks. Spike in queue 2 crashed (agentdojo 0.1.35 NullLogger never registers itself) → fixed with `TraceDirLogger` + test (671fc14). `run_queue3` waits for queue 2, reruns the spike, sizes k for ≤6 h and runs B0/B1/D1h+D2 | Rui (Claude) | ◐ |
 | 10.3 | MUSE-style split-payload multi-turn attacks (in suite v3; automated search not done) | Rui (Claude) | ☑ |
 | 10.5 | **Benign links (25 Oct).** No v3 normal task had a link, and D1h blocks every link copied from an email into a new message. `build_suite.py --links` → `tasks/links_suite.json` (40 benign tasks, 8 scenarios × 5 flows; team adds ≥6 via `tasks/links_manifest.json`). Exploratory, post-freeze **D1h-L** (`d1hl`, `d1hld2`): link allowed if Alex asked for a link from a named contact's email; frozen classes pinned by `tests/test_frozen.py`; blocks every scripted hijack (v1–v3, held-out). Runs queued (`run_queue2`) | Rui (Claude) | ◐ |
 | 10.6 | Held-out run A started 25 Oct 03:44 UTC: run `20261025-034455` (5 configs × 3 runs, 96 tasks, Ollama 0.40.10 — auto-updated from 0.40.9, code f4dfd90). Queue 2 (`run_queue2`, code bd90af2) starts when A's summary appears: AgentDojo spike → links × 7 configs × 3 → D1h-L on dev and held-out → Qwen2.5-7B (`think:false` probe OK) | Rui (Claude) | ◐ |
@@ -80,15 +80,15 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 ## Week 11 (26 Oct – 1 Nov): analysis
 | # | Item | Owner | Status |
 |---|---|---|---|
-| 11.1 | ASR, utility, utility-under-attack, false-block rate, cost; Wilson 95% CIs | Rui | ☐ |
-| 11.2 | Failure-case analysis: `src/block_reasons.py` (per-rule blocks, false-block task ids for human review, link-flow table, secret-read-then-external-send upper bound). Dev v3: no normal task had a blocked action. Khadijah reviews the held-out false-block ids | Khadijah (+Claude) | ◐ |
+| 11.1 | ASR, utility, utility-under-attack, false-block rate, cost; Wilson 95% CIs. `analyse.py` now splits attacks by source (team / LLMail / template) and team style; `report_tables.py` → `results/final_tables.md`. Held-out done; links, D1h-L, Qwen2.5, AgentDojo pending | Rui (Claude) | ◐ |
+| 11.2 | Failure-case analysis: `src/block_reasons.py` (per-rule blocks, false-block task ids for human review, link-flow table, secret-read-then-external-send upper bound). Dev v3: no normal task had a blocked action. Held-out: D1h blocked 3/168 normal episodes, all task `benign-control-travel-send` (rule: action not requested); B0 read-secret-then-external-send 4 (all scored as attacks). **Khadijah: review that task** | Khadijah (+Claude) | ◐ |
 | 11.3 | Figures + tables | Both | ☐ |
 
 ## Week 12 (2 – 8 Nov): write-up
 | # | Item | Owner | Status |
 |---|---|---|---|
 | 12.1 | Final report: draft `3_Sources/Final_Report.md` (dev results + threat-model scope table done; held-out/links/Qwen/AgentDojo PENDING). Build `tools/build_report_docx.py` → `4_Final_Submission/` (git-ignored); check `tools/check_numbers.py` | Both | ◐ |
-| 12.2 | Final slides + rehearsal | Both | ☐ |
+| 12.2 | Final slides: `tools/build_deck.py` builds `4_Final_Submission/Final_Presentation.pptx` (12 main + 10 backup) from the interim deck with every number read from the results, plus `3_Sources/Final_Speaker_Notes.md` (Rui 1–5, 11–12; Khadijah 6–10). Rehearsal ☐ | Both | ◐ |
 | 12.3 | Include AI declaration (`3_Sources/AI_Declaration.md`) in the final report; refresh its run IDs (add AgentDojo / Qwen2.5-7B runs if done). Interim version added 16 Oct (report §AI Declaration, before References) | Both | ☐ |
 
 ---
@@ -100,8 +100,10 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 - [ ] **Both:** agree the answer to the panel question (AgentDojo vs second model).
 - [x] 8 Oct: B1's 2 pilot failures traced (via argument shapes, no text read) to a bug: multi-line subjects leaked to the planner. Fixed + regression test; recheck run 20261008-094725: B1 0/9, B0 4/9 on subject attacks. Report §VII-A updated.
 - [x] 24 Oct: `.wslconfig` caps WSL at 6 GB. Even so, the host ran critically low on memory during the dev run; close other apps during runs.
-- [ ] **Rui + Khadijah:** write the held-out attacks (`docs/HELDOUT_AUTHORING.md`), then say "held-out ready".
-- [ ] AgentDojo timing spike (queued in `run_queue2`), then size and launch the full AgentDojo run.
+- [x] 25 Oct: held-out attacks written (18) and run × 3. Team-written attacks never worked even undefended.
+- [ ] **Khadijah:** review held-out false-block task `benign-control-travel-send` (D1h, 3 episodes); add the verdict to report §VII-F.
+- [ ] **Both:** check the final date/time of the presentation and update `FOOTER` in `tools/build_deck.py` (now "Week 12, Nov 2026").
+- [ ] AgentDojo: `run_queue3` reruns the spike after queue 2 and launches the full run automatically.
 - [ ] **Rui + Khadijah:** add ≥6 benign link tasks to `sandbox/benchmark/tasks/links_manifest.json` (format in `docs/HELDOUT_AUTHORING.md`).
 - [ ] Turn off Ollama auto-update (tray settings). Every summary now records `ollama_version`.
 - [x] 25 Oct: fresh-clone test of `docs/DEMO_GUIDE.md` (oracle path); `--live` in the clone still to do.
@@ -109,6 +111,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 - [ ] Decide the question for the panel: AgentDojo vs Qwen2.5 replication priority.
 
 ## Decisions log
+- 25 Oct: Held-out headline reported pooled (21.8% B0) as pre-stated, with the LLMail part (31.7%) given separately, because the team-written attacks never worked even without a defense.
 - 25 Oct: Team-written held-out attacks received (18: fake calendar invite ×6, fake forwarded thread ×6, disguised link ×6). 8 g1/g3 attacks named emails not in their inbox; the user chose to have Claude replace only the target email name. Claude has therefore seen the held-out text (after the freeze and after D1h-L, bd90af2). No defense code changes from now on; disclosed in the report. Disguised-link markers also match the cleaned-up link.
 - 25 Oct: D1h's link rule blocks every link copied out of an email (by design). Measured on a separate benign-links set; a fix (D1h-L) is exploratory and post-freeze, reported separately; the held-out headline stays D1h+D2.
 - 25 Oct: Threats outside the evaluation (adaptive/long-horizon attacks, supply chain, direct jailbreaks, memory poisoning, fine-grained data isolation) are stated in the final report's threat-model table; neither our suite nor AgentDojo covers them.

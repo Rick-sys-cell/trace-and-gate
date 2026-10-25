@@ -33,6 +33,20 @@ class OllamaChat:
         except (urllib.error.URLError, ConnectionError, ValueError):
             return "unknown"
 
+    def unload(self) -> bool:
+        """Unload the model (keep_alive 0); Ollama reloads it on the next call. Used between episodes of
+        long runs: Ollama's Vulkan runner on Windows leaks host memory (~2-3 GB/h), and unloading ends
+        that process. The model and its options are unchanged."""
+        body = json.dumps({"model": self.model, "messages": [], "keep_alive": 0}).encode()
+        req = urllib.request.Request(self.base_url + "/api/chat", data=body,
+                                     headers={"Content-Type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                resp.read()
+            return True
+        except (urllib.error.URLError, ConnectionError, OSError):
+            return False
+
     def __call__(self, messages: list[dict], tools: list[dict] | None = None) -> dict:
         payload = {
             "model": self.model,

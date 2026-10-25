@@ -37,6 +37,9 @@ DATA = Path(os.environ.get("DATA_DIR", "/data"))
 RESULTS = DATA / "results"
 BENCHMARK_VERSION = "v1.2.2"
 MAX_CONSECUTIVE_ERRORS = 5
+# Unload the model every N episodes (between episodes, no call in flight): Ollama's Vulkan runner on
+# Windows leaks host memory over a long run. Same model and options after the reload. 0 = never.
+RECYCLE_EVERY = int(os.environ.get("RECYCLE_EVERY", "20"))
 
 
 def outage(chat) -> bool:
@@ -118,7 +121,7 @@ def main(argv=None) -> int:
         if args.resume and progress.exists() else []
     done = {(r["config"], r["kind"], r["user_task"], r["injection_task"]) for r in rows}
     chat = OllamaChat()
-    consecutive_errors, aborted = 0, False
+    consecutive_errors, aborted, ran = 0, False, 0
     print(f"{run_id}: {len(user_ids)} user tasks, {len(pairs)} attack pairs per config, "
           f"configs {args.configs}, {len(done)} episodes already done", flush=True)
 
@@ -150,6 +153,9 @@ def main(argv=None) -> int:
                 prog.flush()
                 print(f"[{cfg}] {kind} {u}{' x ' + i if i else ''}: utility={row['utility']} "
                       f"attack={row['attack_success']} blocked={row['blocked']} {row['seconds']}s", flush=True)
+                ran += 1
+                if RECYCLE_EVERY and ran % RECYCLE_EVERY == 0 and chat.unload():
+                    print("model unloaded (memory recycle)", flush=True)
                 consecutive_errors = consecutive_errors + 1 if row["llm_errors"] else 0
                 if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
                     if outage(chat):

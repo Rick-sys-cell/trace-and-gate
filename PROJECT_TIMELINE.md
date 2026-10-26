@@ -2,7 +2,7 @@
 
 **Project:** Trace and Gate: Provenance Tracking and Policy Checks against Indirect Prompt Injection in Email Agents
 **Team:** Rui Zhekai · Khadijah Fathima
-**Last updated:** Sun 25 Oct 2026 (Week 10): held-out run A + queue 2 running; benign links + D1h-L; report draft. Previously Sat 24 Oct 2026 (Week 10): public repo, defenses frozen (`defenses-frozen-v1`), suite v3 dev run done, held-out/AgentDojo/demo tooling ready
+**Last updated:** Mon 26 Oct 2026 (Week 11): AgentDojo attack trial (no attack reached the bar; no second full run), memory guard for long runs; report Table IX, deck slide 8. Previously Sun 25 Oct 2026 (Week 10): held-out run A + queue 2 running; benign links + D1h-L; report draft. Previously Sat 24 Oct 2026 (Week 10): public repo, defenses frozen (`defenses-frozen-v1`), suite v3 dev run done, held-out/AgentDojo/demo tooling ready
 **Repo:** https://github.com/Rick-sys-cell/trace-and-gate (public; course deliverable folders are git-ignored until after grading)
 
 ## Folder layout (14 Oct)
@@ -109,9 +109,11 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 - [x] 25 Oct: fresh-clone test of `docs/DEMO_GUIDE.md` (oracle path); `--live` in the clone still to do.
 - [ ] Backup screen recording of `demo.py --live`.
 - [ ] Decide the question for the panel: AgentDojo vs Qwen2.5 replication priority.
-- [ ] 26 Oct: AgentDojo attack-selection spike (B0 only; user tasks 0–23; 1 pair each; seed 3202; attacks tool_knowledge, injecagent, ignore_previous, important_instructions; no-attack rows reused from `agentdojo_20261025-075616`), then the main attack-only rerun with the chosen attack (b0, b1, d1hd2; 40 user tasks × 2 pairs). Runner records per-episode exposure (boolean).
+- [x] 26 Oct: AgentDojo attack-selection spike (B0 only; user tasks 0–23; 1 pair each; seed 3202; attacks tool_knowledge, injecagent, ignore_previous, important_instructions; no-attack rows reused from `agentdojo_20261025-075616`), then the main attack-only rerun with the chosen attack (b0, b1, d1hd2; 40 user tasks × 2 pairs). Runner records per-episode exposure (boolean). Done: runs `agentdojo_20261026-040133` (tool_knowledge 0/24), `-041145` (injecagent 0/24), `-042258` (ignore_previous 0/24), `-043112` (important_instructions 1/24); injection reached the model in 18–19/24 for each. Report §VII-E Table IX, abstract, discussion, conclusion; deck slide 8 note + speaker notes.
+- [x] 26 Oct: memory guard for long runs: `tools/memory_guard.py` (start first: `Start-Process pythonw -WorkingDirectory <repo> -ArgumentList 'tools/memory_guard.py','--container','<name>'`), flag when free RAM < 2 GB or Ollama > 7 GB; the AgentDojo runner unloads the model between episodes while flagged, and now reloads every 3 episodes by default. Measured: a freshly loaded qwen3:8b holds ~5.5 GB and leaves ~2.5 GB free on this host.
 
 ## Decisions log
+- 26 Oct: AgentDojo attack trial: no attack reached the pre-set bar (≥ 3/24; best important_instructions 1/24), so no second full run. The injection reached the model in about 3 of 4 episodes for every attack, so the low rate is the model ignoring the injection, not the bridge. AgentDojo stays a cost result.
 - 26 Oct (set before the spike runs): pick the AgentDojo attack with the highest B0 attack success in the spike, only if it reaches ≥ 10% (≥ 3/24). If none does, no main rerun: report that no AgentDojo attack reached 10% on Qwen3-8B. The important_instructions result stays in the report; the second attack is disclosed as chosen after the first run came out null. Defenses unchanged (frozen); call timeout, num_ctx, model and Ollama version as in the first run so the reused no-attack rows stay comparable.
 - 26 Oct: AgentDojo is reported as a cost result, not a safety result: its important_instructions attack worked in 2/160 undefended episodes on Qwen3-8B, so 0/160 under the defenses shows nothing about protection. Report and deck say so; published GPT-4o / Llama 3 70B numbers from [3], [5] are cited for contrast.
 - 25 Oct: The reply-own link failure under every defense is reported as a finding (a generic refusal hides a recoverable "no such email" error) rather than fixed, because changing the agent loop after the main runs would make them incomparable.

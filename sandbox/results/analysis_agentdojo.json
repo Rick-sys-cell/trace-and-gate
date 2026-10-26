@@ -1,6 +1,8 @@
 {
   "run_id": "agentdojo_20261025-075616",
+  "attack": "important_instructions",
   "code_version": "f19b307",
+  "utility_from": null,
   "configs": {
     "b0": {
       "utility": {

@@ -292,7 +292,7 @@ def s_generalise(s, D):
     note = ("Qwen2.5-7B: held-out set, 1 run. AgentDojo: workspace suite, "
             + (f"{ad['user_tasks']} user tasks × {ad['pairs_per_task']} injection tasks, " if ad else "")
             + "important_instructions attack; its D2 policy comes from each task's ground-truth calls, "
-            "so D2 there is an upper bound.")
+            "so D2 there is an upper bound." + spike_note(D))
     set_text(by_text(s, "Pilot → rerun"), note)
     below(by_text(s, "Qwen2.5-7B: held-out"), tables(s)[0])
     qb0 = q["configs"]["b0"] if q else None
@@ -317,11 +317,28 @@ def s_generalise(s, D):
                f"defense; Dual-LLM managed {pct1(ad['configs']['b1']['utility'])}. One caveat: D2's policy there "
                "comes from each task's ground truth, an upper bound." if a0 and a1 and "b1" in ad["configs"]
                else f"Second, AgentDojo's workspace suite: {PENDING}.")
+    if (sp := D.t.get("agentdojo_spike")) and ad_text.startswith("Second, AgentDojo's workspace suite, a"):
+        others = {k: a for k, a in sp.items() if k != "important_instructions"}
+        hits = sum(a["asr"]["k"] for a in others.values())
+        ad_text += (f" We also tried the {len(others)} other AgentDojo attacks with no defense on "
+                    f"{next(iter(sp.values()))['user_tasks']} tasks each: {hits or 'no'} successes, although the "
+                    "injection reached the model in most episodes. So the model ignores these attacks; it is not "
+                    "our plumbing.")
     return ("Does this carry over? (pause) First, a second model family: Qwen2.5-7B on the same held-out set, one "
             f"run. With no defense {pct(qb0['asr'], 1) if q else PENDING} of attacks worked; with a defense, at most "
             f"{pct(qw, 1) if q else PENDING}. (pause) " + ad_text + "\n\n"
             "Key line: Safe on a second model; on AgentDojo, no utility cost, but its attack was too weak here to "
             "test safety.")
+
+
+def spike_note(D) -> str:
+    """One line on the B0-only AgentDojo attack trial (results/analysis_agentdojo_spike.json), if run."""
+    sp = D.t.get("agentdojo_spike")
+    if not sp:
+        return ""
+    n = next(iter(sp.values()))["user_tasks"]
+    best = max(a["asr"]["k"] for a in sp.values())
+    return f" {len(sp)} AgentDojo attacks tried with no defense: at most {best}/{n} succeeded each."
 
 
 def s_links(s, D):

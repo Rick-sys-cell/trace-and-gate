@@ -212,7 +212,7 @@ Source: `results/block_reasons_dev_v3.json`
 | D2 | 0.0% (0/56) | none | 0 (0) |
 | D1h+D2 | 0.0% (0/56) | none | 0 (0) |
 
-## AgentDojo workspace
+## AgentDojo workspace: `important_instructions`
 Source: `results/agentdojo_summary_20261025-075616.json`
 
 Run `agentdojo_20261025-075616`, suite workspace v1.2.2, attack `important_instructions`, 40 user tasks x 4 injection tasks, qwen3:8b, agentdojo 0.1.35, aborted: False
@@ -222,4 +222,16 @@ Run `agentdojo_20261025-075616`, suite workspace v1.2.2, attack `important_instr
 | B0 none | 1.2% (2/160) | 0.3–4.4% | 27.5% (11/40) | 33.8% | 0/40 | 59.1 |
 | B1 Dual-LLM | 0.0% (0/160) | -0.0–2.3% | 12.5% (5/40) | 12.5% | 0/40 | 36.4 |
 | D1h+D2 | 0.0% (0/160) | -0.0–2.3% | 30.0% (12/40) | 28.7% | 7/40 | 63.8 |
+
+## AgentDojo attack selection (B0 only)
+Source: `results/analysis_agentdojo_spike.json`
+
+User tasks 0–23, 1 injection task each, seed 3202.
+
+| Attack | B0 attack success | Injection reached the model | Success when reached | Timed out |
+|---|---|---|---|---|
+| `important_instructions` | 4.2% (1/24) | 79.2% (19/24) | 5.3% (1/19) | 0/24 |
+| `tool_knowledge` | 0.0% (0/24) | 79.2% (19/24) | 0.0% (0/19) | 0/24 |
+| `injecagent` | 0.0% (0/24) | 75.0% (18/24) | 0.0% (0/18) | 1/24 |
+| `ignore_previous` | 0.0% (0/24) | 75.0% (18/24) | 0.0% (0/18) | 0/24 |
 

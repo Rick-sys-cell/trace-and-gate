@@ -50,6 +50,42 @@ class ReportTablesTests(unittest.TestCase):
         self.assertEqual(sorted(out["sources"]), ["block_reasons_links", "heldout"])
 
 
+def ad_summary(run_id, attack, exposed=None, **extra):
+    c = {"n_utility": 40, "utility": 0.275, "utility_ci95": [0.16, 0.43], "n_attack": 80, "asr": 0.15,
+         "asr_ci95": [0.09, 0.24], "utility_under_attack": 0.3, "false_block_episodes": 0, "mean_seconds": 30.0}
+    if exposed is not None:
+        c.update(attack_exposed=exposed, asr_given_exposed=0.25)
+    return {"run_id": run_id, "suite": "workspace v1.2.2", "attack": attack, "user_tasks": 40, "pairs_per_task": 2,
+            "model": "qwen3:8b", "agentdojo_version": "0.1.35", "aborted": False, "configs": {"b0": c}, **extra}
+
+
+class AgentDojoTablesTests(unittest.TestCase):
+    def test_one_block_per_attack_first_attack_first_and_spike(self):
+        with tempfile.TemporaryDirectory() as d:
+            rt.RESULTS = Path(d)
+            for name, s in (("agentdojo_summary_20261025-075616.json", ad_summary("a1", "important_instructions")),
+                            ("agentdojo_summary_20261026-040133.json", {**ad_summary("sp", "tool_knowledge"),
+                                                                         "user_tasks": 24}),
+                            ("agentdojo_summary_20261026-090000.json",
+                             ad_summary("a2", "tool_knowledge", exposed=48, utility_from="a1"))):
+                (rt.RESULTS / name).write_text(json.dumps(s))
+            (rt.RESULTS / "analysis_agentdojo_spike.json").write_text(json.dumps({
+                "tool_knowledge": {"run_id": "sp", "seed": 3202, "user_tasks": 24, "asr": rate(6, 24),
+                                   "timed_out_episodes": 1, "exposed": rate(18, 24), "asr_given_exposed": rate(6, 18)},
+                "injecagent": {"run_id": "sp2", "seed": 3202, "user_tasks": 24, "asr": rate(0, 24),
+                               "timed_out_episodes": 0}}))
+            rt.build()
+            md = (rt.RESULTS / "final_tables.md").read_text(encoding="utf-8")
+            out = json.loads((rt.RESULTS / "final_tables.json").read_text(encoding="utf-8"))
+        self.assertEqual((out["agentdojo"]["run_id"], out["agentdojo_tool_knowledge"]["run_id"]), ("a1", "a2"))
+        self.assertLess(md.index("AgentDojo workspace: `important_instructions`"),
+                        md.index("AgentDojo workspace: `tool_knowledge`"))
+        self.assertIn("no-attack episodes reused from `a1`", md)
+        self.assertIn("Injection reached the model in a tool result: B0 none 48/80 (attack success when reached 25.0%)", md)
+        self.assertIn("| `tool_knowledge` | 25.0% (6/24) | 75.0% (18/24) | 33.3% (6/18) | 1/24 |", md)
+        self.assertIn("| `injecagent` | 0.0% (0/24) | – | – | 0/24 |", md)
+
+
 class AttackSourceTests(unittest.TestCase):
     def test_source(self):
         import analyse

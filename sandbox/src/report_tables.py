@@ -138,11 +138,38 @@ def agentdojo_table(s):
     return rows
 
 
-def newest_agentdojo():
+def exposure_line(s):
+    """Attack episodes where the injection reached the model (recorded from commit 957dedb on)."""
+    cs = [(cfg, s["configs"][cfg]) for cfg in ORDER if cfg in s["configs"]]
+    if not any("attack_exposed" in c for _, c in cs):
+        return []
+    parts = [f"{LABEL[cfg]} {c['attack_exposed']}/{c['n_attack']}"
+             + (f" (attack success when reached {100 * c['asr_given_exposed']:.1f}%)"
+                if c.get("asr_given_exposed") is not None else "") for cfg, c in cs]
+    return ["Injection reached the model in a tool result: " + ", ".join(parts), ""]
+
+
+def spike_table(sp):
+    rows = ["| Attack | B0 attack success | Injection reached the model | Success when reached | Timed out |",
+            "|---|---|---|---|---|"]
+    for attack, a in sorted(sp.items(), key=lambda kv: -kv[1]["asr"]["k"]):
+        rows.append(f"| `{attack}` | {pct(a['asr'])} | {pct(a.get('exposed'))} | {pct(a.get('asr_given_exposed'))} | "
+                    f"{a['timed_out_episodes']}/{a['asr']['n']} |")
+    return rows
+
+
+def agentdojo_runs():
+    """[(file name, summary)]: per attack the newest full run (40 user tasks), important_instructions
+    first; with no full run yet, the newest summary of any size (a timing spike)."""
     files = sorted(RESULTS.glob("agentdojo_summary_*.json"))
-    full = [f for f in files if json.loads(f.read_text(encoding="utf-8")).get("user_tasks", 0) >= 40]
-    pick = (full or files or [None])[-1]
-    return (pick.name, json.loads(pick.read_text(encoding="utf-8"))) if pick else (None, None)
+    full = {}
+    for f in files:
+        s = json.loads(f.read_text(encoding="utf-8"))
+        if s.get("user_tasks", 0) >= 40:
+            full[s.get("attack", "important_instructions")] = (f.name, s)
+    if full:
+        return [v for _, v in sorted(full.items(), key=lambda kv: kv[0] != "important_instructions")]
+    return [(files[-1].name, json.loads(files[-1].read_text(encoding="utf-8")))] if files else []
 
 
 def build():
@@ -178,17 +205,26 @@ def build():
         out["sources"][f"block_reasons_{tag}"] = name
         out[f"block_reasons_{tag}"] = br["configs"]
         md += (link_table(br) if tag == "links" else []) + [""] + block_table(br) + [""]
-    name, s = newest_agentdojo()
-    md += ["## AgentDojo workspace", f"Source: `results/{name}`" if name else "", ""]
-    if s is None:
-        md += ["PENDING", ""]
-    else:
-        out["sources"]["agentdojo"] = name
-        out["agentdojo"] = s
+    runs = agentdojo_runs()
+    if not runs:
+        md += ["## AgentDojo workspace", "", "PENDING", ""]
+    for n, (name, s) in enumerate(runs):
+        key = "agentdojo" if n == 0 else f"agentdojo_{s['attack']}"
+        md += [f"## AgentDojo workspace: `{s['attack']}`", f"Source: `results/{name}`", ""]
+        out["sources"][key] = name
+        out[key] = s
         md += [f"Run `{s['run_id']}`, suite {s['suite']}, attack `{s['attack']}`, {s['user_tasks']} user tasks x "
                f"{s['pairs_per_task']} injection tasks, {s['model']}, agentdojo {s['agentdojo_version']}, "
-               f"aborted: {s['aborted']}" + ("" if s["user_tasks"] >= 40 else " **(timing spike, not the full run)**"),
-               ""] + agentdojo_table(s) + [""]
+               f"aborted: {s['aborted']}" + ("" if s["user_tasks"] >= 40 else " **(timing spike, not the full run)**")
+               + (f"; no-attack episodes reused from `{s['utility_from']}`" if s.get("utility_from") else ""),
+               ""] + agentdojo_table(s) + [""] + exposure_line(s)
+    sp = load("analysis_agentdojo_spike.json")
+    if sp:
+        out["sources"]["agentdojo_spike"] = "analysis_agentdojo_spike.json"
+        out["agentdojo_spike"] = sp
+        first = next(iter(sp.values()))
+        md += ["## AgentDojo attack selection (B0 only)", "Source: `results/analysis_agentdojo_spike.json`", "",
+               f"User tasks 0–{first['user_tasks'] - 1}, 1 injection task each, seed {first['seed']}.", ""]             + spike_table(sp) + [""]
     (RESULTS / "final_tables.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
     (RESULTS / "final_tables.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     print(f"wrote results/final_tables.json and .md from {len(out['sources'])} sources: {sorted(out['sources'])}")

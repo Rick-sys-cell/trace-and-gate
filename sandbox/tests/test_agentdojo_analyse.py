@@ -72,6 +72,38 @@ class AgentDojoAnalyseTests(unittest.TestCase):
         self.assertEqual((m["utility"]["d1hd2_only"], m["utility"]["b0_only"]), (1, 0))
         self.assertEqual((m["attack"]["d1hd2_only"], m["attack"]["b0_only"]), (1, 1))
 
+    def progress(self, run_id, rows):
+        (analyse.RESULTS / "progress").mkdir(exist_ok=True)
+        (analyse.RESULTS / "progress" / f"{run_id}.jsonl").write_text(
+            "\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+
+    def test_second_attack_and_spike_with_exposure(self):
+        self.write("agentdojo_summary_20261025-075616.json", summary(40))
+        self.progress("agentdojo_x", [row("b0", "attack", "u1", "i1", False, False)])  # no exposure recorded
+        tk = {**summary(40, run_id="agentdojo_tk"), "attack": "tool_knowledge", "utility_from": "agentdojo_x"}
+        self.write("agentdojo_summary_20261026-090000.json", tk)
+        self.progress("agentdojo_tk", [{**row("b0", "attack", "u1", "i1", False, True), "exposed": True},
+                                       {**row("b0", "attack", "u2", "i1", False, False), "exposed": True},
+                                       {**row("b0", "attack", "u3", "i1", False, False), "exposed": False}])
+        sp = {**summary(24, run_id="agentdojo_sp"), "attack": "injecagent", "utility_from": "agentdojo_x", "seed": 3202}
+        self.write("agentdojo_summary_20261026-050000.json", sp)
+        self.progress("agentdojo_sp", [{**row("b0", "attack", "u1", "i2", False, True, errors=1), "exposed": True},
+                                       {**row("b0", "utility", "u1", None, True), "reused_from": "agentdojo_x"}])
+        self.assertEqual(aa.main(), 0)
+        first = json.loads((analyse.RESULTS / "analysis_agentdojo.json").read_text(encoding="utf-8"))
+        self.assertEqual(first["run_id"], "agentdojo_x")
+        self.assertNotIn("exposed", first["configs"]["b0"]["attack"])
+        second = json.loads((analyse.RESULTS / "analysis_agentdojo_tool_knowledge.json").read_text(encoding="utf-8"))
+        a = second["configs"]["b0"]["attack"]
+        self.assertEqual((a["asr"]["k"], a["exposed"]["k"], a["exposed"]["n"], a["asr_given_exposed"]["k"],
+                          a["asr_given_exposed"]["n"]), (1, 2, 3, 1, 2))
+        self.assertEqual(second["utility_from"], "agentdojo_x")
+        self.assertTrue((analyse.RESULTS / "figures" / "fig1_asr_vs_utility_col_agentdojo_tool_knowledge.png").exists())
+        spike = json.loads((analyse.RESULTS / "analysis_agentdojo_spike.json").read_text(encoding="utf-8"))
+        self.assertEqual(list(spike), ["injecagent"])
+        self.assertEqual((spike["injecagent"]["asr"]["k"], spike["injecagent"]["asr"]["n"],
+                          spike["injecagent"]["timed_out_episodes"]), (1, 1, 1))
+
     def test_nothing_for_aborted_or_missing_run(self):
         self.assertEqual(aa.main(), 1)
         self.write("agentdojo_summary_20261025-075616.json", summary(40, aborted=True))

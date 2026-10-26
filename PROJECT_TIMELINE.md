@@ -109,8 +109,10 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 - [x] 25 Oct: fresh-clone test of `docs/DEMO_GUIDE.md` (oracle path); `--live` in the clone still to do.
 - [ ] Backup screen recording of `demo.py --live`.
 - [ ] Decide the question for the panel: AgentDojo vs Qwen2.5 replication priority.
+- [ ] 26 Oct: AgentDojo attack-selection spike (B0 only; user tasks 0–23; 1 pair each; seed 3202; attacks tool_knowledge, injecagent, ignore_previous, important_instructions; no-attack rows reused from `agentdojo_20261025-075616`), then the main attack-only rerun with the chosen attack (b0, b1, d1hd2; 40 user tasks × 2 pairs). Runner records per-episode exposure (boolean).
 
 ## Decisions log
+- 26 Oct (set before the spike runs): pick the AgentDojo attack with the highest B0 attack success in the spike, only if it reaches ≥ 10% (≥ 3/24). If none does, no main rerun: report that no AgentDojo attack reached 10% on Qwen3-8B. The important_instructions result stays in the report; the second attack is disclosed as chosen after the first run came out null. Defenses unchanged (frozen); call timeout, num_ctx, model and Ollama version as in the first run so the reused no-attack rows stay comparable.
 - 26 Oct: AgentDojo is reported as a cost result, not a safety result: its important_instructions attack worked in 2/160 undefended episodes on Qwen3-8B, so 0/160 under the defenses shows nothing about protection. Report and deck say so; published GPT-4o / Llama 3 70B numbers from [3], [5] are cited for contrast.
 - 25 Oct: The reply-own link failure under every defense is reported as a finding (a generic refusal hides a recoverable "no such email" error) rather than fixed, because changing the agent loop after the main runs would make them incomparable.
 - 25 Oct: Held-out headline reported pooled (21.8% B0) as pre-stated, with the LLMail part (31.7%) given separately, because the team-written attacks never worked even without a defense.

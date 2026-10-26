@@ -15,6 +15,11 @@ Outputs:
   results/progress/agentdojo_<run_id>.jsonl  numbers only, one row per episode; used by --resume
   results/agentdojo_summary_<run_id>.json    numbers only
 Progress lines on stdout carry ids and booleans only.
+
+Long runs: start the host memory guard first (from the project root, in PowerShell):
+    Start-Process pythonw -ArgumentList 'tools/memory_guard.py','--container','<name>'
+It writes results/progress/memory_low.flag while free host RAM is low; between episodes the runner then
+unloads the model and waits for the flag to clear (at most MEMORY_MAX_WAIT_S), so no episode is cut short.
 """
 from __future__ import annotations
 
@@ -45,7 +50,40 @@ BENCHMARK_VERSION = "v1.2.2"
 MAX_CONSECUTIVE_ERRORS = 5
 # Unload the model every N episodes (between episodes, no call in flight): Ollama's Vulkan runner on
 # Windows leaks host memory over a long run. Same model and options after the reload. 0 = never.
-RECYCLE_EVERY = int(os.environ.get("RECYCLE_EVERY", "20"))
+RECYCLE_EVERY = int(os.environ.get("RECYCLE_EVERY", "3"))
+MEMORY_FLAG = RESULTS / "progress" / "memory_low.flag"  # written by tools/memory_guard.py on the host
+MEMORY_POLL_S = 15
+MEMORY_MAX_WAIT_S = 1200
+
+
+_stale_flag = None  # flag text left by a guard that stopped updating it
+
+
+def _flag_text(flag: Path) -> str | None:
+    try:
+        return flag.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+
+def wait_for_memory(chat, flag: Path = MEMORY_FLAG) -> float:
+    """Between episodes: while the host guard reports low memory, unload the model and wait. Returns the
+    seconds waited. The guard rewrites the flag (a timestamp) on every poll; after MEMORY_MAX_WAIT_S the
+    runner carries on and ignores the flag until its text changes, in case the guard died."""
+    global _stale_flag
+    text = _flag_text(flag)
+    if text is None or text == _stale_flag:
+        return 0.0
+    chat.unload()
+    print("memory low: model unloaded, waiting", flush=True)
+    t0 = time.monotonic()
+    while (text := _flag_text(flag)) is not None and time.monotonic() - t0 < MEMORY_MAX_WAIT_S:
+        time.sleep(MEMORY_POLL_S)
+    waited = time.monotonic() - t0
+    if text is not None:
+        _stale_flag = text
+    print(f"memory {'ok' if text is None else 'still low, continuing anyway'} after {waited:.0f}s", flush=True)
+    return waited
 
 
 def outage(chat) -> bool:
@@ -182,6 +220,8 @@ def main(argv=None) -> int:
     # AgentDojo's TraceLogger writes traces to logdir (deny-listed for Claude)
     with TraceDirLogger(logdir), progress.open("a", encoding="utf-8") as prog:
         for cfg in args.configs:
+            if ran:
+                chat.unload()  # fresh runner per config
             pipeline, gate = build_pipeline(cfg, chat, by_prompt, chat.model, reader=chat if cfg == "b1" else None)
             pipeline = ExposureRecorder(pipeline)
             attack = load_attack(args.attack, suite, pipeline)
@@ -189,6 +229,7 @@ def main(argv=None) -> int:
             for kind, u, i in jobs:
                 if aborted or (cfg, kind, u, i) in done:
                     continue
+                wait_for_memory(chat)
                 user_task = suite.get_user_task_by_id(u)
                 errors_before, t0 = gate.llm_errors, time.monotonic()
                 if kind == "utility":
@@ -225,6 +266,7 @@ def main(argv=None) -> int:
                               flush=True)
                         consecutive_errors = 0
 
+    chat.unload()  # leave no model resident after the run
     summary = {"run_id": run_id, "suite": f"workspace {BENCHMARK_VERSION}", "attack": args.attack,
                "model": chat.model, "ollama_version": chat.version(), "code_version": os.environ.get("GIT_COMMIT", "unknown"),
                "agentdojo_version": __import__("importlib.metadata").metadata.version("agentdojo"),

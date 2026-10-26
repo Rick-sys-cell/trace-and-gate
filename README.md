@@ -61,6 +61,11 @@ docker compose run --rm agent python src/demo.py --live     # real model
 python -m unittest discover -s tests                         # offline tests
 ```
 
+**Long runs on a 16 GB Windows host.** Ollama's runner process grows during long runs. Start the memory guard
+first (PowerShell, from the repo root): `Start-Process pythonw -ArgumentList 'tools/memory_guard.py','--container','<name>'`,
+then launch the run with `docker compose run -d --name <name> ...`. While free RAM is under 2 GB or Ollama is
+over 7 GB, the guard sets a flag; between episodes the AgentDojo runner unloads the model and waits for it to clear.
+
 - [`docs/DEMO_GUIDE.md`](docs/DEMO_GUIDE.md): step-by-step setup and a 5-minute demo script for a fresh laptop.
 - [`docs/HELDOUT_AUTHORING.md`](docs/HELDOUT_AUTHORING.md): how the held-out attacks are written (by the team, never by the AI assistant).
 

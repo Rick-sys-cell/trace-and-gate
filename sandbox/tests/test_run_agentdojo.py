@@ -79,6 +79,56 @@ class OracleExposureTests(unittest.TestCase):
 
 
 @unittest.skipIf(rad is None, "agentdojo not installed")
+class MemoryWaitTests(unittest.TestCase):
+    class Chat:
+        unloads = 0
+
+        def unload(self):
+            self.unloads += 1
+            return True
+
+    def setUp(self):
+        self.old = (rad.MEMORY_POLL_S, rad.MEMORY_MAX_WAIT_S, rad.time.sleep)
+        rad.MEMORY_POLL_S, rad.MEMORY_MAX_WAIT_S, rad._stale_flag = 0, 5, None
+
+    def tearDown(self):
+        rad.MEMORY_POLL_S, rad.MEMORY_MAX_WAIT_S, rad.time.sleep = self.old
+
+    def test_no_flag_no_wait(self):
+        chat = self.Chat()
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(rad.wait_for_memory(chat, Path(d) / "memory_low.flag"), 0.0)
+        self.assertEqual(chat.unloads, 0)
+
+    def test_flag_unloads_and_waits_until_cleared(self):
+        chat, polls = self.Chat(), []
+        with tempfile.TemporaryDirectory() as d:
+            flag = Path(d) / "memory_low.flag"
+            flag.write_text("low")
+
+            def sleep(_):  # the guard clears the flag after the third poll
+                polls.append(1)
+                if len(polls) == 3:
+                    flag.unlink()
+            rad.time.sleep = sleep
+            rad.wait_for_memory(chat, flag)
+        self.assertEqual((chat.unloads, len(polls)), (1, 3))
+
+    def test_gives_up_after_max_wait_then_ignores_a_dead_guards_flag(self):
+        chat = self.Chat()
+        rad.MEMORY_MAX_WAIT_S = 0
+        with tempfile.TemporaryDirectory() as d:
+            flag = Path(d) / "memory_low.flag"
+            flag.write_text("t1")
+            rad.wait_for_memory(chat, flag)
+            self.assertEqual(rad.wait_for_memory(chat, flag), 0.0)  # unchanged text: guard is dead
+            self.assertEqual(chat.unloads, 1)
+            flag.write_text("t2")  # a live guard renewed it
+            rad.wait_for_memory(chat, flag)
+        self.assertEqual(chat.unloads, 2)
+
+
+@unittest.skipIf(rad is None, "agentdojo not installed")
 class ReuseTests(unittest.TestCase):
     def test_only_utility_rows_of_requested_configs(self):
         rows = [{"config": c, "kind": k, "user_task": "user_task_0", "injection_task": None if k == "utility" else "i"}

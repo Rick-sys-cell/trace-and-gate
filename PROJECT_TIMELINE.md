@@ -107,7 +107,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 - [ ] **Rui + Khadijah:** add ≥6 benign link tasks to `sandbox/benchmark/tasks/links_manifest.json` (format in `docs/HELDOUT_AUTHORING.md`).
 - [x] 25 Oct: Ollama auto-update turned off (stays on 0.40.10). Every summary records `ollama_version`.
 - [x] 25 Oct: fresh-clone test of `docs/DEMO_GUIDE.md` (oracle path); 27 Oct: `--live` in the clone, 3/3 as expected.
-- [ ] **Rui:** push the local commits (957dedb … and the 27 Oct demo commit) before cloning on the class machine; `demo.py`'s new default task is only on GitHub after the push.
+- [x] 27 Oct: local commits 957dedb … be8784d pushed to GitHub (demo default task, slide 5, prep sheet are public); clone the class machine from GitHub.
 - [ ] **Both:** rehearse the final deck with the live demo on slide 5 (target ~14 min); follow `3_Sources/Final_Demo_and_Presentation_Prep.md`.
 - [ ] Backup screen recording of `demo.py --live`.
 - [ ] Decide the question for the panel: AgentDojo vs Qwen2.5 replication priority.

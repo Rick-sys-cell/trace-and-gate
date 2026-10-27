@@ -81,6 +81,8 @@ TABLE II: Threats Outside This Evaluation
 
 The agent runs inside a Docker container with no internet access, as a non-root user on a read-only file system, with all Linux capabilities removed and limits on memory, CPU and processes. Its only connection is a gateway that forwards model requests to Ollama on the host and refuses everything else. A script checks 16 isolation conditions before every run. The mailbox, contacts and calendar exist only in memory. The AI coding assistant used during development was blocked from reading attack text and transcripts, so it could not itself be injected.
 
+A demonstration script (src/demo.py) runs one attack task, by default a sponsor's email whose attachment hides an instruction to forward the user's bank-login email to the attacker, through B0, D2, D1h and D1h+D2 inside the same sandbox, either with the live model or with scripted calls that obey the attack, and prints each tool call with the gate's decision. It is not part of the evaluation. We used it to check that the public repository works from a fresh clone by following its setup guide (docs/DEMO_GUIDE.md): with the live model, B0 forwarded the secret email to the attacker, every defense stopped the forward, and the user's own task was completed under all four configurations.
+
 ## B. Defenses
 
 We compare five configurations on identical tasks (Table III).

@@ -2,8 +2,8 @@
 
 A 5-minute live demo on a laptop: **one poisoned email, four agents.** The undefended agent is
 hijacked. The same email is then stopped by D2, by D1h and by both, while Alex's real task still
-gets done. (In the final presentation the demo is a shorter cut of this script, cued by slide 5;
-see `3_Sources/Final_Demo_and_Presentation_Prep.md`.)
+gets done. (In the final presentation, slide 5 plays a screen recording of one live run of this demo,
+made on 29 Oct 2026; see `3_Sources/Final_Demo_and_Presentation_Prep.md`.)
 
 The default task is `attack-g1-attachment-1-club`, the sponsor-attachment story from the slides.
 On 27 Oct 2026 a fresh clone of this repo ran it live three times on the project desktop (16 GB RAM,

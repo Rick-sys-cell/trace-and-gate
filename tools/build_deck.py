@@ -15,10 +15,13 @@ import sys
 from pathlib import Path
 
 from pptx import Presentation
-from pptx.util import Inches
+from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.oxml.ns import qn
+from pptx.util import Inches, Pt
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from deck_lib import (by_text, duplicate, fill_table, pictures, remove, reorder, replace_picture,  # noqa: E402
+from deck_lib import (by_name, by_text, duplicate, fill_table, pictures, remove, reorder, replace_picture,  # noqa: E402
                       recolor, set_line, set_notes, set_text, tables)
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -103,6 +106,26 @@ def below(shape, anchor, gap=0.12):
     shape.top = anchor.top + anchor.height + int(gap * 914400)
 
 
+def _shape(s, kind, left, top, width, height, rgb=None, alpha=None):
+    """A borderless autoshape; `alpha` (0-100) makes a solid fill semi-transparent."""
+    sh = s.shapes.add_shape(kind, Inches(left), Inches(top), Inches(width), Inches(height))
+    sh.line.fill.background()
+    sh.shadow.inherit = False
+    if rgb:
+        sh.fill.solid()
+        sh.fill.fore_color.rgb = RGBColor.from_string(rgb)
+        if alpha is not None:
+            clr = sh.fill._xPr.find(qn("a:solidFill"))[0]
+            clr.append(clr.makeelement(qn("a:alpha"), {"val": str(int(alpha * 1000))}))
+    return sh
+
+
+def _to_back(sh):
+    tree = sh._element.getparent()
+    tree.remove(sh._element)
+    tree.insert(2, sh._element)  # after nvGrpSpPr and grpSpPr: drawn first, behind everything
+
+
 def demo_poster():
     """Poster frame for the demo video (no ffmpeg here to grab a real frame): a dark card with a play mark."""
     import io
@@ -126,6 +149,28 @@ def demo_poster():
 
 def s_title(s, D):
     set_text(by_text(s, "ESP3201A  ·  INTERIM"), "ESP3201A  ·  FINAL PRESENTATION")
+    # soft glow top right, behind everything
+    for left, top, size, rgb, alpha in ((6.6, -1.6, 4.6, "3B82F6", 18), (7.9, 0.6, 3.0, "22D3EE", 12)):
+        _to_back(_shape(s, MSO_SHAPE.OVAL, left, top, size, size, rgb, alpha))
+    # gradient accent bar under the subtitle
+    bar = _shape(s, MSO_SHAPE.RECTANGLE, 0.52, 0, 3.0, 0.06)
+    below(bar, by_text(s, "Stopping prompt injection"), gap=0.02)
+    bar.fill.gradient()
+    bar.fill.gradient_angle = 0
+    bar.fill.gradient_stops[0].color.rgb = RGBColor.from_string("3B82F6")
+    bar.fill.gradient_stops[1].color.rgb = RGBColor.from_string("22D3EE")
+    # the story chips: threat (red) -> trace (amber) -> gate (green), joined by chevrons
+    for oval, label, rgb in (("Oval 6", "Poisoned email", "F87171"), ("Oval 9", "Trace the data", "FBBF24"),
+                             ("Oval 12", "Gate the action", "34D399")):
+        ring = by_name(s, oval)
+        ring.line.color.rgb = RGBColor.from_string(rgb)
+        ring.line.width = Pt(2.25)
+        for p in by_text(s, label).text_frame.paragraphs:
+            for r in p.runs:
+                r.font.color.rgb = RGBColor.from_string(rgb)
+                r.font.bold = True
+    for left in (2.95, 5.95):
+        _shape(s, MSO_SHAPE.CHEVRON, left, 3.45, 0.22, 0.3, "64748B")
     return ("Hi, I'm Rui, this is Khadijah. Our project is Trace and Gate: stopping prompt injection in email "
             "agents. (pause) Since the interim we froze our defenses, tested them on attacks they had never seen, "
             "on a second model and on AgentDojo, and measured a cost our first benchmark missed.\n\n"

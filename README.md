@@ -15,19 +15,24 @@ injection*). We compare two system-level defenses against a no-defense baseline 
 | **D2** | Policy checks: per-task tool allowlist, recipient origin, object scope, secrets stay internal |
 | **D1h+D2** | Both: an action must pass both checks |
 
-## Results so far (Qwen3-8B, local)
+## Results (Qwen3-8B, local)
 
-Pilot, run `20261006-100417`: 153 tasks (56 normal, 97 attacks incl. 40 real LLMail-Inject attacks), 765 episodes, 0 model errors.
+Held-out attacks, written after the defenses were frozen (git tag `defenses-frozen-v1`): run `20261025-034455`,
+58 attack and 56 normal tasks, 3 runs pooled, 1,710 episodes, 0 model errors.
 
-| | B0 | B1 | D1 | D2 | D1+D2 |
+| | B0 | B1 | D1h | D2 | D1h+D2 |
 |---|---|---|---|---|---|
-| Attack success | 33.0% (32/97) | 2.1% | **0%** | 1.0% | **0%** |
-| Normal tasks done | 96.4% | 83.9% | 89.3% | 87.5% | 83.9% |
+| Attack success | 21.8% (38/174) | **0%** | **0%** | **0%** | **0%** |
+| Normal tasks done | 89.3% | 80.4% | 89.3% | 89.9% | **91.7%** |
 
-Rerun on suite v2, run `20261008-103942`: B0 attack success 34.0%. D1h: **0% attack success with no normal task lost compared with B0** (87.5% both).
-Week 10 (in progress): D1h+D2, a held-out attack set written after the defenses were frozen (git tag `defenses-frozen-v1`), 3 runs per config, a second model, and the AgentDojo workspace suite.
+- Development suite v3 (run `20261024-135826`, 97 attacks): B0 45.4% (44/97); every defense 0%; normal tasks 89.3% for B0 and D1h+D2.
+- Second model, Qwen2.5-7B (run `20261025-071911`): B0 29.3% (17/58); every defense 0/58.
+- Cost: on 40 harmless tasks with links (run `20261025-055650`), normal tasks fall from 88.3% (B0) to 40.0% (D1h+D2), because D1h blocks links copied out of emails. An exploratory, post-freeze fix (D1h-L) reaches 55.0%.
+- AgentDojo workspace (run `agentdojo_20261025-075616`): its attack worked in only 2/160 episodes even without a defense, so it measures cost, not safety: utility 27.5% (B0) vs 30.0% (D1h+D2).
 
-![Attack success vs normal-task success](sandbox/results/figures/fig1_asr_vs_utility.png)
+All numbers: [`sandbox/results/final_tables.md`](sandbox/results/final_tables.md).
+
+![Attack success vs normal-task success, held-out](sandbox/results/figures/fig1_asr_vs_utility_heldout.png)
 
 ## How it is built
 

@@ -22,6 +22,7 @@ DATASETS = [  # (key, title, analysis file)
     ("d1hl_dev", "D1h-L on dev v3 (1 run)", "analysis_d1hl_dev.json"),
     ("d1hl_heldout", "D1h-L on held-out (1 run)", "analysis_d1hl_heldout.json"),
     ("links", "Benign links (3 runs)", "analysis_links.json"),
+    ("camel", "Held-out, CAMEL-AI agent behind the same gate (1 run)", "analysis_heldout_camel.json"),
 ]
 FLOWS = ["ask", "forward", "reply-own", "send-link", "send-noncontact"]
 

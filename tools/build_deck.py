@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -21,7 +22,7 @@ from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from deck_lib import (by_name, by_text, duplicate, fill_table, pictures, remove, reorder, replace_picture,  # noqa: E402
+from deck_lib import (by_name, by_text, duplicate, fill_table, move, pictures, remove, reorder, replace_picture,  # noqa: E402
                       recolor, set_line, set_notes, set_text, tables)
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,7 +32,9 @@ FIGS = RESULTS / "figures"
 OUT = ROOT / "4_Final_Submission" / "Final_Presentation.pptx"
 NOTES_MD = ROOT / "3_Sources" / "Final_Speaker_Notes.md"
 DEMO_VIDEO = ROOT / "2_Presentation_Prep" / "Demo_Backup_live_2026-10-29.mp4"  # git-ignored; 1920x1032, 63 s
-FOOTER = "ESP3201A  ·  Final presentation  ·  Week 12, Fri 13 Nov 2026"
+FOOTER = "ESP3201A  ·  Final presentation  ·  Week 12, Fri 6 Nov 2026"
+# terminal screenshots of real command output, key lines boxed (tools/evidence_shots.py; git-ignored like the deck)
+EVIDENCE = ROOT / "2_Presentation_Prep" / "evidence"
 PENDING = "PENDING"
 CFGS = ["b0", "b1", "d1h", "d2", "d1hd2"]
 LABEL = {"b0": "B0 none", "b1": "B1 Dual-LLM", "d1h": "D1h", "d2": "D2", "d1hd2": "D1h+D2",
@@ -126,6 +129,62 @@ def _to_back(sh):
     tree.insert(2, sh._element)  # after nvGrpSpPr and grpSpPr: drawn first, behind everything
 
 
+def add_pic(s, path, left, top, max_w, max_h):
+    """Picture scaled to fit max_w x max_h inches (aspect kept), or None with a warning if it does not exist."""
+    if not path.exists():
+        print(f"warning: {path.relative_to(ROOT)} not found (run tools/evidence_shots.py); slide left without it")
+        return None
+    from PIL import Image
+    w, h = Image.open(path).size
+    k = min(max_w / w, max_h / h)
+    return s.shapes.add_picture(str(path), Inches(left), Inches(top), Inches(w * k), Inches(h * k))
+
+
+def shot(name):
+    """(png, captured lines) of an evidence screenshot; lines are empty if the shot has not been made."""
+    txt = EVIDENCE / f"{name}.txt"
+    return EVIDENCE / f"{name}.png", (txt.read_text(encoding="utf-8").splitlines() if txt.exists() else [])
+
+
+CARD_TINT = {"red": ("FEE2E2", "B91C1C"), "green": ("DCFCE7", "166534"), "blue": ("DBEAFE", "1D4ED8"),
+             "amber": ("FEF3C7", "B45309")}
+
+
+def side_cards(s, cards):
+    """Fill the three right-hand callout cards of interim slide 10: cards = [(big, small, tint or None)]."""
+    boxes = sorted((sh for sh in s.shapes if sh.shape_type == 1 and abs(sh.left / 914400 - 6.75) < 0.01),
+                   key=lambda sh: sh.top)
+    olds = (("0% · 0 lost", "D1h blocked 34/34"), ("33% → 34%", "No-defense rate held"), ("2/20", "“Read and answer”"))
+    for box, (old_big, old_small), (big, small, tint) in zip(boxes, olds, cards):
+        bt, st = by_text(s, old_big), by_text(s, old_small)
+        set_text(bt, big)
+        set_text(st, small)
+        if tint:
+            fill, ink = CARD_TINT[tint]
+            box.fill.solid()
+            box.fill.fore_color.rgb = RGBColor.from_string(fill)
+            for p in bt.text_frame.paragraphs:
+                for r in p.runs:
+                    r.font.color.rgb = RGBColor.from_string(ink)
+
+
+SPIKE_MODELS = [("qwen3:8b", "Qwen3-8B (main)"), ("qwen2.5:7b", "Qwen2.5-7B"), ("llama3.1:8b", "Llama 3.1 8B")]
+
+
+def clone_table(s, shape):
+    """A copy of a table shape, placed right after it, with its own shape id."""
+    from copy import deepcopy
+    el = deepcopy(shape._element)
+    shape._element.addnext(el)
+    ids = [int(i) for i in s.shapes._spTree.xpath(".//p:cNvPr/@id")]
+    el.xpath("./p:nvGraphicFramePr/p:cNvPr")[0].set("id", str(max(ids) + 1))
+    return next(t for t in tables(s) if t._element is el)
+
+
+def slide_no(fn):
+    return next(i for i, (_, f) in enumerate(PLAN, 1) if f is fn)
+
+
 def demo_poster():
     """Poster frame for the demo video (no ffmpeg here to grab a real frame): a dark card with a play mark."""
     import io
@@ -171,9 +230,10 @@ def s_title(s, D):
                 r.font.bold = True
     for left in (2.95, 5.95):
         _shape(s, MSO_SHAPE.CHEVRON, left, 3.45, 0.22, 0.3, "64748B")
-    return ("Hi, I'm Rui, this is Khadijah. Our project is Trace and Gate: stopping prompt injection in email "
-            "agents. (pause) Since the interim we froze our defenses, tested them on attacks they had never seen, "
-            "on a second model and on AgentDojo, and measured a cost our first benchmark missed.\n\n"
+    return ("Hi, I'm Rui, and this is Khadijah. Our project is Trace and Gate. (pause) The problem: an AI email "
+            "assistant can be tricked by instructions hidden inside an email. That trick is called prompt injection. "
+            "(pause) Since the interim we froze our defenses, then tested them on attacks they had never seen, on a "
+            "second AI model, on a public benchmark called AgentDojo, and around a second agent framework, CAMEL-AI.\n\n"
             "Key line: Trace the data, gate the action, and measure what it costs.")
 
 
@@ -182,12 +242,13 @@ def s_problem(s, D):
     set_text(by_text(s, "61%"), pct(b0["asr"]) if b0 else PENDING)
     set_text(by_text(s, "of attachment attacks"),
              f"of our development attacks worked with no defense ({k_n(b0['asr']) if b0 else PENDING})")
-    return ("An email assistant reads mail from anyone, and it can send, forward and delete for you. (pause) "
-            "Alex asks it to open the sponsor's attachment. Hidden in the attachment is an instruction to forward "
-            "the club's bank-PIN email to an outside address, and the undefended agent does it. (pause) OWASP ranks "
-            "prompt injection the number one LLM risk, Microsoft collected over 200,000 attack prompts in a public "
-            f"challenge, and on our development benchmark {pct(b0['asr']) if b0 else PENDING} of attacks worked "
-            "with no defense.\n\nKey line: Every inbound email is attacker input.")
+    return ("An email assistant reads mail from anyone, and it can send, forward and delete for you. That is the "
+            "danger. (pause) Here, Alex asks it to open a sponsor's attachment. Hidden in the attachment is a line "
+            "telling the assistant to forward the club's bank login to an outside address, and with no defense it "
+            "does. (pause) This is not rare: OWASP ranks prompt injection the number one risk for AI apps, "
+            "Microsoft collected over 200,000 attack emails in a public challenge, and on our own test set "
+            f"{pct(b0['asr']) if b0 else PENDING} of attacks worked with no defense.\n\n"
+            "Key line: Every email the assistant reads could be written by an attacker.")
 
 
 def s_question(s, D):
@@ -199,11 +260,34 @@ def s_question(s, D):
              "3 runs:")
     set_text(by_text(s, "D1  provenance"), "D1h  provenance")
     set_text(by_text(s, "D1+D2"), "D1h+D2")
-    return ("Our question: do provenance tracking and policy checks stop hijacked email actions, compared with no "
-            "defense and Dual-LLM, without breaking normal tasks? (pause) The thresholds are the ones from our "
-            "proposal: at least 80% fewer successful attacks, and at most a 10-point drop in normal-task success. "
-            "We test them on held-out attacks, pooled over three runs.\n\n"
-            "Key line: Safe, and still useful, on attacks we never tuned for.")
+    return ("Our question has two halves. (pause) Safety: do our two checks stop the attacker's actions? Provenance "
+            "tracking, D1h, checks where each part of an action came from. Policy checks, D2, check the action "
+            "against a short list of what this task needs. Usefulness: does the assistant still do Alex's normal "
+            "work? (pause) We set the bar in our proposal: at least 80% fewer successful attacks, and at most a "
+            "10-point drop in normal tasks done. We compare against no defense, B0, and a known defense, Dual-LLM, "
+            "B1.\n\nKey line: Safe, and still useful, on attacks we never tuned for.")
+
+
+def s_runs(s, D):
+    """New (consultation 30 Oct, "show that we host it in a container"): the sandbox chain plus a screenshot."""
+    set_text(by_text(s, "BACKUP"), "METHOD")
+    set_text(by_text(s, "Backup: sandbox settings"), "How it runs: everything inside a locked container")
+    for old, new in (("fake inbox, 11 tools", "not root, read-only"),
+                     ("no internet, no DNS", "no route to the internet"),
+                     ("6 model endpoints only", "chat calls only"),
+                     ("qwen3:8b on AMD GPU", "Qwen3-8B on our own GPU")):
+        set_text(by_text(s, old), new)
+    remove(tables(s)[0])
+    add_pic(s, shot("container")[0], 0.5, 2.78, 6.65, 2.3)
+    set_text(by_text(s, "isolation checks pass"), "isolation checks pass before every run (backup slide "
+             f"{slide_no(s_backup_sandbox)})")
+    return ("Before the results, how it actually runs, because the professor asked us to show this. (pause) The "
+            "agent and its fake mailbox live inside a Docker container: a sealed box on our desktop. It is not "
+            "root, its files are read-only, and its network has no route to the internet. The only way out is a "
+            "gateway that passes chat requests to the AI model, which runs on our own GPU. So even a hijacked "
+            "agent cannot reach anything real. (pause) The screenshot is real output: the container's settings, and "
+            "the internal network. And before every run a script checks 16 isolation rules; all 16 pass.\n\n"
+            "Key line: Even a hijacked agent has nothing real to reach.")
 
 
 def s_where(s, D):
@@ -214,15 +298,19 @@ def s_where(s, D):
                 set_text(sh, "D1h")
             elif t.startswith("D1 provenance"):
                 set_text(sh, ["Provenance"] + [p.text for p in sh.text_frame.paragraphs[1:]])
+    set_text(by_text(s, "Where each defense"), "The gate: two checks before every action")
     cap = by_text(s, "Each configuration")
-    set_text(cap, [["Each configuration switches on one gate; D1h+D2 uses both. ",
-                    "A blocked call returns a neutral error, so the agent can carry on with the user’s task."]])
-    return ("This is where each defense sits between an email and an action. (pause) Dual-LLM changes what the "
-            "model reads: a second model turns each email into variables. D2 and D1h check what the model does. "
-            "D2 asks: is this tool, recipient and email on the task's allowlist? D1h asks: does every argument, the "
-            "recipient, the link, the target, trace back to the user? (pause) If either says no, the call is blocked "
-            "with a neutral error, and the agent can still finish the user's task.\n\n"
-            "Key line: B1 changes what the model reads; D1h and D2 check what it does.")
+    add_pic(s, shot("rules")[0], 0.5, 3.1, 4.85, 1.95)
+    move(cap, left=5.45, top=4.1, width=4.1, height=0.9)
+    set_text(cap, [["Plain code, no AI decides. ", "A blocked call gets a neutral error, so the agent carries on "
+                    "with the user’s task."]])
+    return ("This is the gate, the heart of the project. (pause) Every time the AI wants to act, for example send "
+            "or forward an email, the action stops here first. D2 asks: is this tool on the short list this task "
+            "needs? Reading an attachment is; forwarding is not. D1h asks: did the user ask for this, and did the "
+            "recipient and content come from the user rather than from an email? (pause) The code at the bottom is "
+            "the real rule, two lines each. No AI makes the decision, so a clever email cannot talk its way past "
+            "it. Dual-LLM, B1, works differently: a second model reads the emails, so the main model never sees "
+            "the raw text.\n\nKey line: The model proposes; plain code decides.")
 
 
 def s_demo(s, D):
@@ -242,9 +330,10 @@ def s_demo(s, D):
                 "login, ALLOWED, and still answers Alex, so Alex would never notice. (play on) D2: the forward tool is "
                 "not on this task's allowlist, so the model never even sees it. D1h: the model tries the forward, and "
                 "it is BLOCKED because Alex never asked to forward. Both: safe. And in every row Alex's own task is "
-                "done. If the video does not play, open the MP4 from the desktop, or go to backup slide 21.\n\n"
+                "done. If the video does not play, open the MP4 from the desktop, or go to the next slide: it shows "
+                f"the same run as a screenshot (and backup slide {slide_no(s_backup_demo)} as a table).\n\n"
                 "Key line: Same email, same model; only the gate changes.")
-    print(f"warning: {DEMO_VIDEO.relative_to(ROOT)} not found; slide 5 is a live-demo cue instead of the video")
+    print(f"warning: {DEMO_VIDEO.relative_to(ROOT)} not found; the demo slide is a live-demo cue, not the video")
     set_text(by_text(s, "BACKUP"), "LIVE DEMO")
     set_text(by_text(s, "Backup: engineering"), "Live demo: one poisoned email, four agents")
     fill_table(tables(s)[0], [
@@ -268,6 +357,45 @@ def s_demo(s, D):
             "is done. (pause) If B0 is not hijacked this time, say so: the model resisted this run, which is why "
             "we measure over hundreds of runs; then run the same command with --oracle.\n\n"
             "Key line: Same email, same model; only the gate changes.")
+
+
+def demo_verdicts(lines):
+    """From captured demo.py output: ({config: 'hijacked'|'safe'}, tasks done, configs run)."""
+    summ = next((l for l in lines if l.startswith("Summary:")), "")
+    verdicts = dict(re.findall(r"(B0|B1|D2|D1h\+D2|D1h)\s+(hijacked|safe)", summ))
+    done = sum("own task: done" in l for l in lines)
+    return verdicts, done, len(verdicts)
+
+
+def s_demo_proved(s, D):
+    """New (consultation: "screenshots that highlight the key evidence lines"): the demo's output, annotated.
+    The live capture (evidence/demo.png) if it exists, else the scripted-agent one (demo_oracle.png)."""
+    png, lines = shot("demo")
+    live = png.exists()
+    if not live:
+        png, lines = shot("demo_oracle")
+    set_text(by_text(s, "RESULTS · RERUN"), "DEMO · THE EVIDENCE")
+    set_text(by_text(s, "Rerun: are we on track?"), "What the demo proved, line by line")
+    remove(tables(s)[0])
+    remove(by_text(s, "Pilot → rerun"))
+    add_pic(s, png, 0.5, 1.1, 6.1, 4.0)
+    v, done, n = demo_verdicts(lines)
+    defended = [k for k in v if k != "B0"]
+    all_safe = bool(defended) and all(v[k] == "safe" for k in defended)
+    side_cards(s, [
+        ("B0: hijacked" if v.get("B0") == "hijacked" else f"B0: {v.get('B0', PENDING)}",
+         "The bank login was forwarded; Alex noticed nothing", "red"),
+        ("Gate: blocked" if all_safe else PENDING,
+         "D2 hid the forward; D1h refused it (never asked)", "green"),
+        (f"{done} of {n}" if n else PENDING, "configurations still did Alex’s task", "blue")])
+    mode = "the live run" if live else "the scripted agent, which always obeys the attack"
+    return (f"Here is the same run as a screenshot, from {mode}, with the key lines boxed. (pause) Red: with no "
+            "defense, the forward of the bank login was ALLOWED. The agent then answered Alex normally, so Alex would "
+            "never know. (pause) Green: with D2 the forward tool was hidden, and with D1h the forward was BLOCKED, "
+            "with the reason printed: Alex never asked to forward. (pause) Blue: in every row Alex's own question "
+            "was still answered. So the defenses stop the attack, not the work. One demo is one example, so next "
+            "Khadijah shows how we tested it at scale. Over to Khadijah.\n\n"
+            "Key line: Blocked the attack, kept the work.")
 
 
 def s_tested(s, D):
@@ -295,12 +423,13 @@ def s_tested(s, D):
         ["Scoring", "code checks the final mailbox"],
         ["Statistics", "Wilson 95% CI; exact McNemar (paired)"],
     ])
-    return ("We test on four sets. The development suite of 153 tasks is where we built and debugged. Then we froze "
-            "the defenses on 24 October, and only after that built a held-out set: the same normal tasks, 40 new "
-            "LLMail-Inject attacks and 18 attacks we wrote ourselves in styles the defenses had never seen. (pause) "
-            "Two more sets check the edges: 40 normal tasks that contain harmless links, and AgentDojo's workspace "
-            "suite. Everything ran on Qwen3-8B at temperature 0.3, scored by code from the final mailbox. "
-            "Over to Khadijah.\n\nKey line: Frozen first, then tested on attacks the defenses never saw.")
+    return ("Thanks Rui. One demo is one example; here is how we tested at scale. (pause) We built our defenses on "
+            "a development set of 153 tasks. Then, on 24 October, we froze the defense code, and only after that "
+            "built a held-out set of new attacks: 40 real attack emails from Microsoft's LLMail-Inject challenge and "
+            "18 we wrote ourselves. That stops us from tuning the defenses to the test. (pause) Two more sets check "
+            "the edges: normal tasks with harmless links, and AgentDojo, a public benchmark we did not write. A "
+            "program, not a person, scores each run by checking the final mailbox.\n\n"
+            "Key line: Frozen first, then tested on attacks the defenses never saw.")
 
 
 def _result_slide(s, D, key, fig, kicker, title, card, caption):
@@ -397,13 +526,22 @@ def s_generalise(s, D):
                      pct(qc["utility"]) if qc else (PENDING if not q else "–"),
                      f"{100 * ac['asr']:.0f}%" if ac and ac["asr"] is not None else (PENDING if not ad else "–"),
                      f"{100 * ac['utility']:.0f}%" if ac and ac["utility"] is not None else (PENDING if not ad else "–")])
-    fill_table(tables(s)[0], rows, widths=[1.2, 1.2, 1.2, 1.2, 1.2], row_height=0.42)
-    note = ("Qwen2.5-7B: held-out set, 1 run. AgentDojo: workspace suite, "
-            + (f"{ad['user_tasks']} user tasks × {ad['pairs_per_task']} injection tasks, " if ad else "")
-            + "important_instructions attack; its D2 policy comes from each task's ground-truth calls, "
-            "so D2 there is an upper bound." + spike_note(D))
-    set_text(by_text(s, "Pilot → rerun"), note)
-    below(by_text(s, "Qwen2.5-7B: held-out"), tables(s)[0])
+    main = tables(s)[0]
+    fill_table(main, rows, widths=[1.2, 1.2, 1.2, 1.2, 1.2], row_height=0.34)
+    # consultation 30 Oct: frame the injection as a test, and try other models (B0 only, pre-set rule: >= 3/24)
+    sm = D.t.get("agentdojo_spike_models") or {}
+    spike = clone_table(s, main)
+    spike_rows = [["AgentDojo, no defense", "Stock attack", "“This is a test” attack"]]
+    for model, name in SPIKE_MODELS:
+        cells = sm.get(model, {})
+        spike_rows.append([name] + [k_n(cells[a]["asr"]) if a in cells else PENDING
+                                    for a in ("important_instructions", "test_framing")])
+    fill_table(spike, spike_rows, widths=[2.0, 2.0, 2.0], row_height=0.3)
+    below(spike, main, gap=0.14)
+    note = by_text(s, "Pilot → rerun")
+    set_text(note, "AgentDojo: workspace suite; D2’s policy there comes from each task’s ground truth (an upper "
+             "bound). Attack table: first 24 tasks, one injection each.")
+    below(note, spike, gap=0.06)
     qb0 = q["configs"]["b0"] if q else None
     qw = worst_defended(q) if q else None
     set_text(by_text(s, "0% · 0 lost"), f"{pct(qb0['asr'])} → {pct(qw)}" if q else PENDING)
@@ -433,11 +571,69 @@ def s_generalise(s, D):
                     f"{next(iter(sp.values()))['user_tasks']} tasks each: {hits or 'no'} successes, although the "
                     "injection reached the model in most episodes. So the model ignores these attacks; it is not "
                     "our plumbing.")
+    done = {(m, a): c["asr"] for m, v in sm.items() for a, c in v.items()}
+    if len(done) == 2 * len(SPIKE_MODELS):
+        (bm, ba), best = max(done.items(), key=lambda kv: kv[1]["k"])
+        names = dict(SPIKE_MODELS)
+        ad_text += (" (pause) The professor suggested framing the attack as a test the user set up, and trying "
+                    "other models. The bottom table is that trial, with no defense. "
+                    + (f"The best was {k_n(best)}, {names[bm]} with the "
+                       f"{'test framing' if ba == 'test_framing' else 'stock attack'}. "
+                       + (f"That passed our pre-set bar of 3 out of 24, so we reran the full benchmark on it."
+                          if best["k"] >= 3 else "None reached our pre-set bar of 3 out of 24, so small local models "
+                          "simply ignore AgentDojo's attacks, and AgentDojo cannot test protection here.")))
+    elif sm:
+        ad_text += " (pause) The bottom table is the trial the professor suggested; it is still running."
     return ("Does this carry over? (pause) First, a second model family: Qwen2.5-7B on the same held-out set, one "
             f"run. With no defense {pct(qb0['asr'], 1) if q else PENDING} of attacks worked; with a defense, at most "
             f"{pct(qw, 1) if q else PENDING}. (pause) " + ad_text + "\n\n"
             "Key line: Safe on a second model; on AgentDojo, no utility cost, but its attack was too weak here to "
             "test safety.")
+
+
+def s_camel(s, D):
+    """New (consultation: "incorporate CAMEL-AI into our sandbox"): a CAMEL-AI ChatAgent behind the unchanged gate
+    (sandbox/src/camel_agent.py). Held-out run, 1 run; pre-set rule: a protection claim only if CAMEL's B0 is hijacked
+    in >= 10% of LLMail attacks."""
+    png, lines = shot("camel")
+    live = bool(lines) and not any("scripted hijacked agent" in l for l in lines)
+    set_text(by_text(s, "RESULTS · RERUN"), "NEW · CAMEL-AI")
+    set_text(by_text(s, "Rerun: are we on track?"), "CAMEL-AI in our sandbox: new agent, same gate")
+    remove(tables(s)[0])
+    remove(by_text(s, "Pilot → rerun"))
+    add_pic(s, png, 0.5, 1.1, 6.1, 4.0)
+    c = D.ds("camel")
+    if c:
+        b0 = c["configs"]["b0"]
+        worst = worst_defended(c, cfgs=[k for k in ("d2", "d1h", "d1hd2") if k in c["configs"]])
+        ll = c.get("by_source", {}).get("b0", {}).get("llmail", {}).get("asr") or b0["asr"]
+        claim = rate(ll) is not None and rate(ll) >= 0.10
+        first = (f"{pct(b0['asr'])} → {pct(worst)}",
+                 "held-out attacks that worked: no defense → worst" + ("" if claim else " (too few to test)"), "green" if claim else "amber")
+        second = (f"{pct(b0['utility'])} → {pct(c['configs']['d1hd2']['utility'])}",
+                  "normal tasks done: no defense → D1h+D2", "blue")
+    else:
+        claim = None
+        first = ("Same decisions", "the gate blocks exactly as with our own agent", "green")
+        second = ("Held-out run", "running now; results in the report", "blue")
+    side_cards(s, [first, second, ("CAMEL-AI ≠ CaMeL", "CAMEL-AI builds agents; CaMeL is a "
+                                   "defense (future work)", "amber")])
+    what = "a live run" if live else "the scripted agent that always obeys the attack"
+    if c:
+        res = (f"On the held-out set, one run, CAMEL-AI with no defense was hijacked in {pct(b0['asr'], 1)} of "
+               f"attacks; behind our gate, at most {pct(worst, 1)}. "
+               + ("" if claim else "That is too few to call it protection: the attack mostly failed by itself. ")
+               + f"D1h+D2 completed {pct(c['configs']['d1hd2']['utility'], 1)} of normal tasks against "
+               f"{pct(b0['utility'], 1)} with no defense. ")
+    else:
+        res = ("The full held-out run with CAMEL-AI is running now; the results will be in the report. ")
+    return ("The professor asked us to bring CAMEL-AI into the sandbox. CAMEL-AI is a popular open-source framework "
+            "for building AI agents. (pause) We swapped our own agent loop for CAMEL-AI's ChatAgent, and kept "
+            "everything else the same: same model, same gateway, same container, and every tool call still goes "
+            f"through our gate. The screenshot is {what}: with no defense the forward goes through; with any of our "
+            "defenses it is blocked; and Alex's task is still done. (pause) " + res +
+            "Careful with the name: CAMEL-AI, the agent framework, is not CaMeL, a defense from Google DeepMind. "
+            "CaMeL is future work.\n\nKey line: The gate does not care which agent is behind it.")
 
 
 def spike_note(D) -> str:
@@ -566,22 +762,29 @@ def s_scorecard(s, D):
 
 
 def s_scope(s, D):
-    set_text(by_text(s, "RE-SCOPE"), "SCOPE")
-    set_text(by_text(s, "What changed since"), "What this does not show")
+    set_text(by_text(s, "RE-SCOPE"), "LIMITS AND FUTURE WORK")
+    set_text(by_text(s, "What changed since"), "What this does not show yet, and what is next")
     fill_table(tables(s)[0], [
-        ["Threat", "AgentDojo", "Our benchmark", "D1h / D2 in principle"],
-        ["Adaptive, long-horizon attacks", "Fixed templates", "2-turn split only", "Rules can be targeted"],
-        ["Supply chain (model, tools, packages)", "No", "No", "Out of scope"],
-        ["Direct jailbreak by the user", "No", "No", "User is trusted"],
-        ["Memory poisoning over time", "No", "No", "No memory; labels would need to persist"],
-        ["Fine-grained data isolation", "Goal-specific checks", "Exact-match scoring", "Per-email labels only"],
-    ], widths=[2.9, 1.7, 1.8, 2.6])
-    set_text(by_text(s, "The course brief"), "Neither benchmark tests these, so we make no claim about them. "
-             "Disguised links in the held-out set are our one step towards adaptive attacks.")
-    return ("Rui again. What our results do not show. (pause) Every attack we ran is fixed: none adapts to our "
-            "rules, and an attacker who knows them has targets, for example copying an email subject the user is "
-            "likely to name. Supply-chain attacks, a malicious user, memory that persists across sessions and "
-            "paraphrased leaks are outside both benchmarks. (pause) These are the next things to test.\n\n"
+        ["Open question", "Why it matters", "Next step"],
+        ["Adaptive attackers", "Every attack we ran is fixed; one who knows our rules has targets",
+         "Attack our own rules (red team)"],
+        ["Copied links", f"D1h blocks harmless links copied from emails (slide {slide_no(s_links)})",
+         "Test D1h-L on new data"],
+        ["CaMeL (Google DeepMind)", "A defense that plans in code and tracks data flow: close to ours, stricter",
+         "Compare on the same tasks"],
+        ["SETA (CAMEL-AI)", "Environments for agents that use a terminal; no injection tests yet",
+         "Port the gate to shell tools"],
+        ["Supply chain, malicious user, memory", "Outside both benchmarks", "Out of scope"],
+    ], widths=[2.3, 4.2, 2.5])
+    set_text(by_text(s, "The course brief"), "We make no claim about anything in this table.")
+    return ("Rui again. What our results do not show yet. (pause) First, every attack we ran is fixed. None adapts "
+            "to our rules, and an attacker who knows them has targets. Second, the link cost Khadijah showed. "
+            "(pause) Two pieces of related work we found while following up the consultation. CaMeL, from Google "
+            "DeepMind, is a defense: the model turns the user's request into a small program and the system tracks "
+            "where every piece of data came from. It is close to our provenance idea, but stricter, and comparing "
+            "against it is the natural next step. SETA, from the CAMEL-AI team, is a set of environments for "
+            "agents that work in a terminal; it has no prompt-injection tests yet, so putting our gate around shell "
+            "tools would be new work.\n\n"
             "Key line: Strong on fixed attacks; adaptive attackers are the open question.")
 
 
@@ -766,14 +969,15 @@ def s_backup_benchmark(s, D):
 
 # order: (interim slide number to copy, builder)
 PLAN = [
-    (1, s_title), (2, s_problem), (4, s_question), (6, s_where), (18, s_demo), (8, s_tested), (9, s_dev),
-    (9, s_heldout),
-    (10, s_generalise), (10, s_links), (12, s_scorecard), (3, s_scope), (7, s_takeaways),
+    (1, s_title), (2, s_problem), (4, s_question), (14, s_runs), (6, s_where), (18, s_demo), (10, s_demo_proved),
+    (8, s_tested), (9, s_dev), (9, s_heldout), (10, s_generalise), (10, s_camel), (10, s_links), (12, s_scorecard),
+    (3, s_scope), (7, s_takeaways),
     (14, s_backup_sandbox), (17, s_backup_d1h), (19, s_backup_exposure), (15, s_backup_channel),
     (18, s_backup_failures), (21, s_backup_cost), (22, s_backup_safety), (18, s_backup_demo),
     (5, s_backup_pipeline), (16, s_backup_benchmark),
 ]
-MAIN = 13
+MAIN = 16
+SPEAKERS = "Rui: slides 1–7 and 15–16. Khadijah: slides 8–14."
 
 
 def build(out=OUT, notes_md=NOTES_MD):
@@ -798,8 +1002,8 @@ def build(out=OUT, notes_md=NOTES_MD):
     out.parent.mkdir(parents=True, exist_ok=True)
     prs.save(str(out))
     md = ["# Final presentation: speaker notes (generated by tools/build_deck.py; do not edit by hand)", "",
-          "Rui: slides 1–6 (including the demo video on slide 5) and 12–13. Khadijah: slides 7–11. About one "
-          "minute per main slide, plus about two minutes for the demo.", ""]
+          f"{SPEAKERS} The demo video is slide {slide_no(s_demo)}. About one minute per main slide, plus about "
+          "two minutes for the demo. Words in (brackets) are cues, not to be read out.", ""]
     for i, (s, note) in enumerate(zip(slides, notes), 1):
         title = next((sh.text_frame.text for sh in s.shapes if sh.has_text_frame and abs(sh.top / 914400 - 0.36) < 0.01
                       ), "") or next((sh.text_frame.text for sh in s.shapes if sh.has_text_frame
@@ -808,7 +1012,7 @@ def build(out=OUT, notes_md=NOTES_MD):
     notes_md.write_text("\n".join(md), encoding="utf-8")
     pending = sum(sh.text_frame.text.count(PENDING) for s in slides for sh in s.shapes if sh.has_text_frame)
     pending += sum(c.text.count(PENDING) for s in slides for t in tables(s) for r in t.table.rows for c in r.cells)
-    print(f"wrote {out.relative_to(ROOT)} ({len(slides)} slides, {pending} PENDING) and {notes_md.relative_to(ROOT)}")
+    print(f"wrote {out} ({len(slides)} slides, {pending} PENDING) and {notes_md.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

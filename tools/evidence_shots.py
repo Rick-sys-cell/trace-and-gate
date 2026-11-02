@@ -14,6 +14,7 @@ import argparse
 import os
 import re
 import subprocess
+import textwrap
 import sys
 from datetime import date
 from pathlib import Path
@@ -89,6 +90,7 @@ def render(name: str, title: str, lines: list[str], boxes: list[tuple[str, str, 
     d.text((PAD * SCALE, y0 + lh * (len(lines) + 0.6)), caption, font=f, fill=DIM)
     OUT.mkdir(parents=True, exist_ok=True)
     img.save(OUT / f"{name}.png")
+    (OUT / f"{name}.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")  # read by build_deck.py
     print(f"wrote {(OUT / f'{name}.png').relative_to(ROOT)} ({len(lines)} lines)")
 
 
@@ -141,22 +143,23 @@ def shot_container():
 def code_lines(path: Path, anchor: str, before: int, after: int) -> tuple[int, list[str]]:
     src = path.read_text(encoding="utf-8").splitlines()
     i = next(n for n, l in enumerate(src) if anchor in l)
-    return i + 1 - before, src[i - before:i + after + 1]
+    block = src[i - before:i + after + 1]
+    return i + 1 - before, textwrap.dedent("\n".join(block)).splitlines()  # method-body indentation dropped
 
 
 def shot_rules():
     path = SANDBOX / "src" / "defenses.py"
     lines = []
-    for title, anchor in (("D2 policy checks: PolicyDefense.check()", 'if tool not in policy.get("tools", [])'),
-                          ("D1h provenance tracking: ProvenanceDefense.check()",
+    for title, anchor in (("D2 policy checks: is the tool on this task's list?", 'if tool not in policy.get("tools", [])'),
+                          ("D1h provenance tracking: did the user ask for this action?",
                            "if not any(re.search(p, user) for p in INTENT[tool])")):
-        start, src = code_lines(path, anchor, 4, 2)
-        lines += [f"# sandbox/src/defenses.py, line {start}: {title}"]
+        start, src = code_lines(path, anchor, 0, 1)
+        lines += [f"# {title}"]
         lines += [f"{start + k:>4}  {l}" for k, l in enumerate(src)] + [""]
-    render("rules", "sandbox/src/defenses.py: the two rules that fired in the demo", lines[:-1], [
-        (r'tool not in policy.get\("tools"', GREEN, "D2: tool not on the task's list"),
-        (r"re.search\(p, user\) for p in INTENT", GREEN, "D1h: Alex never asked for it"),
-    ], "Excerpt of the frozen defense code (git tag defenses-frozen-v1). Both rules are plain code: no AI decides.")
+    render("rules", "sandbox/src/defenses.py (frozen, tag defenses-frozen-v1)", lines[:-1], [
+        (r'tool not in policy.get\("tools"', GREEN, ""),
+        (r"re.search\(p, user\) for p in INTENT", GREEN, ""),
+    ], "Plain code, no AI: the two rules that fired in the demo.")
 
 
 def demo_lines(extra: list[str]) -> list[str]:
@@ -164,30 +167,30 @@ def demo_lines(extra: list[str]) -> list[str]:
     return [PROMPT + "docker compose run --rm agent python src/demo.py " + " ".join(extra)] + run(cmd)
 
 
-DEMO_BOXES = [
-    (r"ALLOWED", RED, "attacker's action ran"),
-    (r"HIJACKED", RED, ""),
-    (r"BLOCKED", GREEN, "gate refused it"),
-    (r"did not follow", GREEN, "never tried"),
-    (r"own task: done", BLUE, "Alex's task still done"),
-]
+DEMO_BOXES = [(r"ALLOWED", RED, ""), (r"HIJACKED", RED, ""), (r"BLOCKED", GREEN, ""), (r"did not follow", GREEN, ""),
+              (r"own task: done", BLUE, ""), (r"^Summary", YELLOW, "")]
 
 
 def shot_demo():
     render("demo", "Windows PowerShell: one poisoned email, four agents (live model)", demo_lines(["--live"]),
-           DEMO_BOXES + [(r"^Summary", YELLOW, "")], stamp())
+           DEMO_BOXES, stamp())
+
+
+def shot_demo_oracle():
+    render("demo_oracle", "Windows PowerShell: one poisoned email, four agents (scripted agent)",
+           demo_lines(["--oracle"]), DEMO_BOXES, "Scripted agent that obeys the attack (--oracle); no model.")
 
 
 def shot_camel():
     mode = os.environ.get("CAMEL_SHOT_MODE", "--live")
     render("camel", "Windows PowerShell: the same gate around a CAMEL-AI agent",
            demo_lines([mode, "--agent", "camel"]),
-           [(r"agent: CAMEL-AI", YELLOW, "CAMEL-AI ChatAgent")] + DEMO_BOXES + [(r"^Summary", YELLOW, "")],
+           [(r"agent: CAMEL-AI", YELLOW, "")] + DEMO_BOXES,
            stamp() if mode == "--live" else "Scripted agent that obeys the attack (--oracle); no model.")
 
 
 SHOTS = {"isolation": shot_isolation, "container": shot_container, "rules": shot_rules, "demo": shot_demo,
-         "camel": shot_camel}
+         "demo_oracle": shot_demo_oracle, "camel": shot_camel}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

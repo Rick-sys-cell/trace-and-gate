@@ -100,9 +100,9 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 | 12.1 | Final report: draft `3_Sources/Final_Report.md` (all sections filled except the authors' review in §VII-F; no page limit (confirmed 25 Oct): 95% CI columns restored in Tables IV-VI, Figs. 3-4 added (held-out by channel, Qwen2.5), Fig. 5 AgentDojo after the run; 8 pages, 206 numbers checked (2 unmatched are cited literature values), 0 unmatched). Build `tools/build_report_docx.py` → `4_Final_Submission/` (git-ignored); check `tools/check_numbers.py` | Both | ◐ |
 | 12.2 | Final slides: `tools/build_deck.py` builds `4_Final_Submission/Final_Presentation.pptx` (12 main + 10 backup) from the interim deck with every number read from the results, plus `3_Sources/Final_Speaker_Notes.md` (Rui 1–5, 11–12; Khadijah 6–10). Rehearsal ☐ | Both | ◐ |
 | 12.3 | Include AI declaration (`3_Sources/AI_Declaration.md`) in the final report; refresh its run IDs (AgentDojo and Qwen2.5-7B run ids added 26 Oct). Interim version added 16 Oct (report §AI Declaration, before References) | Both | ☐ |
-| 12.4 | Evidence screenshots from real captured output, key lines highlighted (`tools/evidence_shots.py`): container proof (compose ps, inspect, isolation 16/16), demo decisions, the rule in code, CAMEL demo | Rui (Claude) | ☐ |
-| 12.5 | Deck rework after the consultation: fewer words, container slide, gate picture, demo-evidence slide, CAMEL-AI slide, updated AgentDojo, future work (CaMeL, SETA); speaker notes rewritten (Rui 1–7, 15–16; Khadijah 8–14) | Rui (Claude) | ☐ |
-| 12.6 | Plain-language guides: `3_Sources/Guide_Presentation_Simple.md` and `Guide_Report_Simple.md` (+ docx) | Rui (Claude) | ☐ |
+| 12.4 | Evidence screenshots from real captured output, key lines highlighted (`tools/evidence_shots.py`): container proof (compose ps, inspect, isolation 16/16), demo decisions, the rule in code, CAMEL demo. **Done 2 Nov** (6ce4430): container, isolation, rules, demo_oracle, camel (oracle); live demo shot due Tue 3 Nov when the model is free | Rui (Claude) | ☑ |
+| 12.5 | Deck rework after the consultation: fewer words, container slide, gate picture, demo-evidence slide, CAMEL-AI slide, updated AgentDojo, future work (CaMeL, SETA); speaker notes rewritten (Rui 1–7, 15–16; Khadijah 8–14). **Draft done 2 Nov** (2e68143): 16 main + 10 backup slides, footer Fri 6 Nov; slide 11 spike table and slide 12 CAMEL numbers fill in from the overnight runs | Rui (Claude) | ☐ |
+| 12.6 | Plain-language guides: `3_Sources/Guide_Presentation_Simple.md` and `Guide_Report_Simple.md` (+ docx). Presentation guide **done 2 Nov**; report guide after Fri 6 Nov | Rui (Claude) | ☐ |
 
 ---
 
@@ -115,7 +115,7 @@ Status legend: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 - [x] 24 Oct: `.wslconfig` caps WSL at 6 GB. Even so, the host ran critically low on memory during the dev run; close other apps during runs.
 - [x] 25 Oct: held-out attacks written (18) and run × 3. Team-written attacks never worked even undefended.
 - [ ] **Khadijah:** review held-out false-block task `benign-control-travel-send` (D1h, 3 episodes); add the verdict to report §VII-F.
-- [x] Final presentation: Week 12, Friday 13 Nov 2026 (deck footer updated 25 Oct).
+- [x] Final presentation: Week 12, **Friday 6 Nov 2026** (corrected 2 Nov; was recorded as 13 Nov). Rehearsal Thu 5 Nov.
 - [x] AgentDojo full run `agentdojo_20261025-075616` done 26 Oct; §VII-E (Table VIII, Fig. 5), abstract, discussion, conclusion filled; docx + deck rebuilt (slide 8 says the attack was too weak on our model to test safety).
 - [ ] **Rui + Khadijah:** add ≥6 benign link tasks to `sandbox/benchmark/tasks/links_manifest.json` (format in `docs/HELDOUT_AUTHORING.md`).
 - [x] 25 Oct: Ollama auto-update turned off (stays on 0.40.10). Every summary records `ollama_version`.

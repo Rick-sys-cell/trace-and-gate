@@ -124,7 +124,7 @@ If either check says no, the action is blocked. The AI gets a neutral "not permi
 11. **Does the defense slow the agent down?** No extra AI calls. D2 even uses about 26% fewer tokens, because it offers fewer tools. Dual-LLM adds reader calls.
 12. **Why did normal-task success go *up* with D1h+D2?** 91.7% vs 89.3% is within noise: on paired tasks, 6 succeeded only under D1h+D2 and 2 only under no defense, and the McNemar test gives p = 0.29, so this is not a real difference. What matters is that it did not go down.
 13. **What about attachments or links that look harmless?** The held-out set includes disguised links. D1h blocks links copied from emails into new messages, attack or not. That is the link cost on slide 13.
-14. **Did an AI help you?** Yes, a coding assistant (Claude) helped write code and documents. It never read the attack transcripts. It saw our 18 team-written attacks after the freeze, only to fix 8 email names; no defense changed after that. It also wrote the "this is a test" AgentDojo template and the CAMEL-AI adapter, which we disclose.
+14. **Did an AI help you?** Yes, a coding assistant (Claude) helped write code and documents. It was blocked from reading attack payloads and transcripts. After the freeze, at our request, it fixed a wrong email name in 8 of our 18 team-written attacks, so it saw those 8; no defense changed after that. It also wrote the "this is a test" AgentDojo template and the CAMEL-AI adapter, which we disclose.
 15. **What would you do with more time?** Adaptive attacks against our own rules, a comparison with CaMeL, and the gate around terminal tools (SETA).
 
 ---

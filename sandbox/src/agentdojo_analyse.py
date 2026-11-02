@@ -8,8 +8,11 @@ results/analysis_agentdojo.json (timeouts per kind, utility without timed-out ep
 paired McNemar tests on the same user task / pair, injection exposure where recorded) and
 results/figures/fig1_asr_vs_utility{,_col,_slide}_agentdojo.png for the important_instructions run;
 results/analysis_agentdojo_<attack>.json and figures *_agentdojo_<attack>.png for any other attack;
-results/analysis_agentdojo_spike.json for the B0-only spike runs (fewer than 40 user tasks, with
-no-attack rows reused from a full run).
+results/analysis_agentdojo_spike.json for the B0-only spike runs of the main model (fewer than 40 user tasks,
+with no-attack rows reused from a full run, or attack episodes only), and
+results/analysis_agentdojo_spike_models.json for every model x attack cell of the spike (2 Nov).
+A full run of another model than MAIN_MODEL is written with the model in the name, e.g.
+analysis_agentdojo_llama3.1-8b_test_framing.json.
 """
 from __future__ import annotations
 
@@ -20,6 +23,18 @@ import analyse
 
 CONFIGS = ["b0", "b1", "d1hd2"]
 FIRST_ATTACK = "important_instructions"
+MAIN_MODEL = "qwen3:8b"
+
+
+def model_of(s: dict) -> str:
+    return s.get("model", MAIN_MODEL)
+
+
+def run_tag(model: str, attack: str) -> str:
+    """'' for the first run, '_<attack>' for other attacks on the main model, '_<model>_<attack>' otherwise."""
+    if model == MAIN_MODEL:
+        return "" if attack == FIRST_ATTACK else f"_{attack}"
+    return f"_{model.replace(':', '-')}_{attack}"
 
 
 def summaries() -> list[dict]:
@@ -27,17 +42,18 @@ def summaries() -> list[dict]:
 
 
 def full_summaries() -> dict[str, dict]:
-    """Per attack, the newest summary of a full run (40 user tasks, not a spike); important_instructions first."""
+    """Per run tag (model and attack), the newest summary of a full run (40 user tasks, not a spike);
+    the main model's important_instructions run first."""
     out = {}
     for s in summaries():
         if s.get("user_tasks", 0) >= 40:
-            out[s.get("attack", FIRST_ATTACK)] = s
-    return dict(sorted(out.items(), key=lambda kv: kv[0] != FIRST_ATTACK))
+            out[run_tag(model_of(s), s.get("attack", FIRST_ATTACK))] = s
+    return dict(sorted(out.items(), key=lambda kv: kv[0] != ""))
 
 
 def spike_summaries() -> list[dict]:
-    """The attack-selection spike: partial runs that reused a full run's no-attack rows."""
-    return [s for s in summaries() if s.get("user_tasks", 0) < 40 and s.get("utility_from")]
+    """The attack-selection spike: partial runs that reused a full run's no-attack rows or ran attacks only."""
+    return [s for s in summaries() if s.get("user_tasks", 0) < 40 and (s.get("utility_from") or s.get("attacks_only"))]
 
 
 def read_rows(run_id: str) -> list[dict] | None:
@@ -94,20 +110,25 @@ def analyse_rows(rows: list[dict], configs: list[str]) -> dict:
 
 
 def spike() -> int:
-    out = {}
+    cells: dict[str, dict] = {}  # model -> attack -> cell; a newer run of the same cell replaces an older one
     for s in spike_summaries():
         rows = read_rows(s["run_id"])
         att = [r for r in rows or [] if r["kind"] == "attack" and r["config"] == "b0"]
         if not att or s.get("aborted"):
             continue
-        out[s.get("attack", FIRST_ATTACK)] = {"run_id": s["run_id"], "seed": s.get("seed"),
-                                               "user_tasks": s["user_tasks"], "asr": analyse.rate(att, "attack_success"),
-                                               "timed_out_episodes": sum(bool(r["llm_errors"]) for r in att),
-                                               **(exposure(att) or {})}
-    if out:
-        (analyse.RESULTS / "analysis_agentdojo_spike.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
-        print(f"wrote the attack-selection spike for {sorted(out)}")
-    return len(out)
+        cells.setdefault(model_of(s), {})[s.get("attack", FIRST_ATTACK)] = {
+            "run_id": s["run_id"], "seed": s.get("seed"), "user_tasks": s["user_tasks"],
+            "asr": analyse.rate(att, "attack_success"), "timed_out_episodes": sum(bool(r["llm_errors"]) for r in att),
+            **(exposure(att) or {})}
+    if MAIN_MODEL in cells:
+        (analyse.RESULTS / "analysis_agentdojo_spike.json").write_text(json.dumps(cells[MAIN_MODEL], indent=2),
+                                                                       encoding="utf-8")
+        print(f"wrote the attack-selection spike for {sorted(cells[MAIN_MODEL])}")
+    if set(cells) - {MAIN_MODEL}:
+        (analyse.RESULTS / "analysis_agentdojo_spike_models.json").write_text(json.dumps(cells, indent=2),
+                                                                              encoding="utf-8")
+        print(f"wrote the model x attack spike for {sorted(cells)}")
+    return sum(len(v) for v in cells.values())
 
 
 def main() -> int:
@@ -116,16 +137,16 @@ def main() -> int:
     if not runs:
         print("no finished full AgentDojo run yet; nothing written")
         return 0 if n_spike else 1
-    for attack, s in runs.items():
-        tag = "" if attack == FIRST_ATTACK else f"_{attack}"
+    for tag, s in runs.items():
+        attack = s.get("attack", FIRST_ATTACK)
         configs = [c for c in CONFIGS if c in s["configs"]]
         rows = read_rows(s["run_id"])
         if rows is not None:
-            out = {"run_id": s["run_id"], "attack": attack, "code_version": s["code_version"],
+            out = {"run_id": s["run_id"], "attack": attack, "model": model_of(s), "code_version": s["code_version"],
                    "utility_from": s.get("utility_from"), **analyse_rows(rows, configs)}
             (analyse.RESULTS / f"analysis_agentdojo{tag}.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
         analyse.figures(as_analysis(s), configs, f"_agentdojo{tag}", heatmap=False)
-        print(f"wrote AgentDojo analysis and figures for {attack}, {configs} (run {s['run_id']})")
+        print(f"wrote AgentDojo analysis and figures for {model_of(s)} {attack}, {configs} (run {s['run_id']})")
     return 0
 
 

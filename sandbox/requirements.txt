@@ -1,3 +1,5 @@
 # The agent, tools, scoring and isolation check use only the Python standard library.
 # Pinned extras are installed at build time only; the running container has no internet.
 agentdojo==0.1.35   # Week 10: AgentDojo workspace suite (src/agentdojo_bridge.py, src/run_agentdojo.py)
+camel-ai==0.2.90   # Week 12: CAMEL-AI ChatAgent behind our gate (src/camel_agent.py); consultation 30 Oct
+mcp==1.26.0        # camel-ai 0.2.90 imports mcp.server.FastMCP, removed in mcp 2.x

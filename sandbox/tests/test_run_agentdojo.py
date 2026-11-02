@@ -79,6 +79,31 @@ class OracleExposureTests(unittest.TestCase):
 
 
 @unittest.skipIf(rad is None, "agentdojo not installed")
+class TestFramingTests(unittest.TestCase):
+    """The custom attack registers and fills its template; a synthetic template, never the real one."""
+
+    def test_registered_and_fills_every_vector(self):
+        import warnings
+        from agentdojo.attacks.attack_registry import ATTACKS
+        from agentdojo.task_suite.load_suites import get_suite
+        import agentdojo_bridge as bridge
+        from test_agentdojo_bridge import scripted
+        warnings.simplefilter("ignore")
+        self.assertIs(ATTACKS["test_framing"], rad.TestFramingAttack)
+        suite = get_suite(rad.BENCHMARK_VERSION, "workspace")
+        ut = suite.get_user_task_by_id("user_task_0")
+        pipeline, _ = bridge.build_pipeline("b0", scripted([], ""), {}, "llama3.1:8b")
+        att = rad.TestFramingAttack(suite, pipeline, template="X {user} {model} {goal} Y")
+        inj = att.attack(ut, suite.get_injection_task_by_id("injection_task_0"))
+        self.assertTrue(inj)
+        goal = suite.get_injection_task_by_id("injection_task_0").GOAL
+        self.assertTrue(all(v == f"X Emma Johnson {att.model_name} {goal} Y" for v in inj.values()))
+
+    def test_model_flag_reaches_the_client(self):
+        self.assertEqual(rad.OllamaChat("llama3.1:8b").model, "llama3.1:8b")
+
+
+@unittest.skipIf(rad is None, "agentdojo not installed")
 class MemoryWaitTests(unittest.TestCase):
     class Chat:
         unloads = 0

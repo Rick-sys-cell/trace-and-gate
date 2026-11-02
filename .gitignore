@@ -2,6 +2,7 @@
 sandbox/benchmark/payloads/
 sandbox/results/raw/
 sandbox/results/progress/
+sandbox/benchmark/custom_attacks/
 
 # Python / local
 __pycache__/

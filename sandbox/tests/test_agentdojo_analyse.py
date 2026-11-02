@@ -104,6 +104,28 @@ class AgentDojoAnalyseTests(unittest.TestCase):
         self.assertEqual((spike["injecagent"]["asr"]["k"], spike["injecagent"]["asr"]["n"],
                           spike["injecagent"]["timed_out_episodes"]), (1, 1, 1))
 
+    def test_model_spike_cells_and_other_model_full_run(self):
+        self.write("agentdojo_summary_20261025-075616.json", summary(40))
+        self.progress("agentdojo_x", [row("b0", "attack", "u1", "i1", False, False)])
+        cells = [("qwen3:8b", "test_framing", "agentdojo_q", True), ("llama3.1:8b", "test_framing", "agentdojo_l1", False),
+                 ("llama3.1:8b", "important_instructions", "agentdojo_l2", True)]
+        for n, (model, attack, rid, hit) in enumerate(cells):
+            s = {**summary(24, run_id=rid), "model": model, "attack": attack, "attacks_only": True, "seed": 3202}
+            self.write(f"agentdojo_summary_20261102-0{n}0000.json", s)
+            self.progress(rid, [{**row("b0", "attack", "u1", "i1", False, hit), "exposed": True}])
+        full = {**summary(40, run_id="agentdojo_lf"), "model": "llama3.1:8b", "attack": "test_framing"}
+        self.write("agentdojo_summary_20261103-000000.json", full)
+        self.progress("agentdojo_lf", [row("b0", "attack", "u1", "i1", False, True)])
+        self.assertEqual(aa.main(), 0)
+        main = json.loads((analyse.RESULTS / "analysis_agentdojo_spike.json").read_text(encoding="utf-8"))
+        self.assertEqual(list(main), ["test_framing"])
+        models = json.loads((analyse.RESULTS / "analysis_agentdojo_spike_models.json").read_text(encoding="utf-8"))
+        self.assertEqual({m: {a: c["asr"]["k"] for a, c in v.items()} for m, v in models.items()},
+                         {"qwen3:8b": {"test_framing": 1}, "llama3.1:8b": {"test_framing": 0, "important_instructions": 1}})
+        other = json.loads((analyse.RESULTS / "analysis_agentdojo_llama3.1-8b_test_framing.json").read_text(encoding="utf-8"))
+        self.assertEqual((other["model"], other["attack"]), ("llama3.1:8b", "test_framing"))
+        self.assertTrue((analyse.RESULTS / "analysis_agentdojo.json").exists())
+
     def test_nothing_for_aborted_or_missing_run(self):
         self.assertEqual(aa.main(), 1)
         self.write("agentdojo_summary_20261025-075616.json", summary(40, aborted=True))

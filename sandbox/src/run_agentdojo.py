@@ -4,9 +4,13 @@ Inside the sandbox, from sandbox/:
     docker compose run --rm agent python src/run_agentdojo.py --configs b0 b1 d1hd2 --pairs-per-task 2
     docker compose run --rm agent python src/run_agentdojo.py --user-tasks 3 --pairs-per-task 1   # timing spike
     ... --attack tool_knowledge --utility-from agentdojo_20261025-075616   # attack-only rerun
+    ... --model llama3.1:8b --attack test_framing --configs b0 --user-tasks 24 --pairs-per-task 1 --seed 3202         --attacks-only   # model x attack spike: attack episodes only
 
 Per config: every user task once without injection (utility), then a seeded sample of
 (user task x injection task) pairs under --attack (default "important_instructions") (ASR).
+--model picks the agent's model (and B1's reader); default $MODEL. The extra attack "test_framing" is
+built like important_instructions, but its template (TEST_FRAMING, git-ignored; consultation 30 Oct) frames
+the injected goal as part of an authorised test of the assistant.
 --utility-from copies another run's no-attack rows instead of rerunning them (same model, seed and code
 path; the rows are tagged "reused_from"). Each attack episode also records "exposed": whether a tool
 result shown to the model contained the injection (a boolean; the text itself is never stored).
@@ -34,7 +38,8 @@ import warnings
 from pathlib import Path
 
 from agentdojo.agent_pipeline import BasePipelineElement
-from agentdojo.attacks.attack_registry import load_attack
+from agentdojo.attacks.attack_registry import load_attack, register_attack
+from agentdojo.attacks.base_attacks import FixedJailbreakAttack, get_model_name_from_pipeline
 from agentdojo.benchmark import run_task_with_injection_tasks, run_task_without_injection_tasks
 from agentdojo.logging import LOGGER_STACK, NullLogger
 from agentdojo.task_suite.load_suites import get_suite
@@ -54,6 +59,21 @@ RECYCLE_EVERY = int(os.environ.get("RECYCLE_EVERY", "3"))
 MEMORY_FLAG = RESULTS / "progress" / "memory_low.flag"  # written by tools/memory_guard.py on the host
 MEMORY_POLL_S = 15
 MEMORY_MAX_WAIT_S = 1200
+TEST_FRAMING = DATA / "benchmark" / "custom_attacks" / "test_framing.txt"  # attack text: git-ignored
+
+
+@register_attack
+class TestFramingAttack(FixedJailbreakAttack):
+    """important_instructions' structure ({user}, {model}, {goal}), with the goal framed as a step of an
+    authorised test (the professor's suggestion, 30 Oct). The template is read at run time."""
+
+    name = "test_framing"
+
+    def __init__(self, task_suite, target_pipeline, template: str | None = None):
+        super().__init__(template if template is not None else TEST_FRAMING.read_text(encoding="utf-8"),
+                         task_suite, target_pipeline)
+        self.user_name = "Emma Johnson"
+        self.model_name = get_model_name_from_pipeline(target_pipeline)
 
 
 _stale_flag = None  # flag text left by a guard that stopped updating it
@@ -184,9 +204,11 @@ def main(argv=None) -> int:
     ap.add_argument("--pairs-per-task", type=int, default=2, help="injection tasks sampled per user task")
     ap.add_argument("--user-tasks", type=int, default=0, help="only the first N user tasks (timing spike)")
     ap.add_argument("--attack", default="important_instructions")
+    ap.add_argument("--model", default=None, help="agent model (and B1's reader); default $MODEL")
     ap.add_argument("--seed", type=int, default=3201)
     ap.add_argument("--resume", metavar="RUN_ID")
     ap.add_argument("--utility-from", metavar="RUN_ID", help="reuse that run's no-attack rows")
+    ap.add_argument("--attacks-only", action="store_true", help="skip the no-attack episodes (B0 spike)")
     args = ap.parse_args(argv)
     warnings.simplefilter("ignore")  # AgentDojo warnings can quote task text
 
@@ -212,7 +234,7 @@ def main(argv=None) -> int:
         with progress.open("a", encoding="utf-8") as prog:
             prog.writelines(json.dumps(r) + "\n" for r in rows)
     done = {(r["config"], r["kind"], r["user_task"], r["injection_task"]) for r in rows}
-    chat = OllamaChat()
+    chat = OllamaChat(args.model) if args.model else OllamaChat()
     consecutive_errors, aborted, ran = 0, False, 0
     print(f"{run_id}: {len(user_ids)} user tasks, {len(pairs)} attack pairs per config, "
           f"configs {args.configs}, {len(done)} episodes already done", flush=True)
@@ -225,7 +247,7 @@ def main(argv=None) -> int:
             pipeline, gate = build_pipeline(cfg, chat, by_prompt, chat.model, reader=chat if cfg == "b1" else None)
             pipeline = ExposureRecorder(pipeline)
             attack = load_attack(args.attack, suite, pipeline)
-            jobs = [("utility", u, None) for u in user_ids] + [("attack", u, i) for u, i in pairs]
+            jobs = ([] if args.attacks_only else [("utility", u, None) for u in user_ids]) +                 [("attack", u, i) for u, i in pairs]
             for kind, u, i in jobs:
                 if aborted or (cfg, kind, u, i) in done:
                     continue
@@ -271,7 +293,7 @@ def main(argv=None) -> int:
                "model": chat.model, "ollama_version": chat.version(), "code_version": os.environ.get("GIT_COMMIT", "unknown"),
                "agentdojo_version": __import__("importlib.metadata").metadata.version("agentdojo"),
                "seed": args.seed, "pairs_per_task": args.pairs_per_task, "user_tasks": len(user_ids),
-               "utility_from": args.utility_from,
+               "utility_from": args.utility_from, "attacks_only": args.attacks_only,
                "aborted": aborted, "configs": summarise(rows)}
     out = RESULTS / f"agentdojo_summary_{run_id.removeprefix('agentdojo_')}.json"
     out.write_text(json.dumps(summary, indent=2), encoding="utf-8")

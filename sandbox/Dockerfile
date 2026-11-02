@@ -9,7 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    DATA_DIR=/data
+    DATA_DIR=/data     TIKTOKEN_CACHE_DIR=/opt/tiktoken
 
 RUN groupadd -g 10001 appgroup \
  && useradd -u 10001 -g appgroup -M -d /nonexistent -s /usr/sbin/nologin appuser
@@ -18,6 +18,9 @@ WORKDIR /opt/experiment
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt
+# CAMEL counts tokens with tiktoken, which downloads its encodings on first use; the running container has
+# no internet, so fetch them now (build time only).
+RUN python -c "import tiktoken; [tiktoken.get_encoding(e) for e in ('cl100k_base', 'o200k_base')]"
 
 COPY src ./src
 

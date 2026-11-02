@@ -158,18 +158,37 @@ def spike_table(sp):
     return rows
 
 
+def agentdojo_tag(s) -> str:
+    """'' for qwen3:8b with important_instructions, '_<attack>' for its other attacks, '_<model>_<attack>' for
+    other models (as agentdojo_analyse.run_tag)."""
+    model, attack = s.get("model", "qwen3:8b"), s.get("attack", "important_instructions")
+    if model == "qwen3:8b":
+        return "" if attack == "important_instructions" else f"_{attack}"
+    return f"_{model.replace(':', '-')}_{attack}"
+
+
 def agentdojo_runs():
-    """[(file name, summary)]: per attack the newest full run (40 user tasks), important_instructions
-    first; with no full run yet, the newest summary of any size (a timing spike)."""
+    """[(file name, summary)]: per model and attack the newest full run (40 user tasks), qwen3:8b with
+    important_instructions first; with no full run yet, the newest summary of any size (a timing spike)."""
     files = sorted(RESULTS.glob("agentdojo_summary_*.json"))
     full = {}
     for f in files:
         s = json.loads(f.read_text(encoding="utf-8"))
         if s.get("user_tasks", 0) >= 40:
-            full[s.get("attack", "important_instructions")] = (f.name, s)
+            full[agentdojo_tag(s)] = (f.name, s)
     if full:
-        return [v for _, v in sorted(full.items(), key=lambda kv: kv[0] != "important_instructions")]
+        return [v for _, v in sorted(full.items(), key=lambda kv: kv[0] != "")]
     return [(files[-1].name, json.loads(files[-1].read_text(encoding="utf-8")))] if files else []
+
+
+def spike_models_table(cells):
+    attacks = sorted({a for v in cells.values() for a in v})
+    rows = ["| Model | " + " | ".join(f"`{a}`" for a in attacks) + " |", "|---|" + "---|" * len(attacks)]
+    for model, v in cells.items():
+        rows.append(f"| {model} | " + " | ".join(
+            f"{pct(v[a]['asr'])}; reached {pct(v[a].get('exposed'))}; timed out {v[a]['timed_out_episodes']}"
+            if a in v else "–" for a in attacks) + " |")
+    return rows
 
 
 def build():
@@ -209,7 +228,7 @@ def build():
     if not runs:
         md += ["## AgentDojo workspace", "", "PENDING", ""]
     for n, (name, s) in enumerate(runs):
-        key = "agentdojo" if n == 0 else f"agentdojo_{s['attack']}"
+        key = "agentdojo" if n == 0 else "agentdojo" + agentdojo_tag(s)
         md += [f"## AgentDojo workspace: `{s['attack']}`", f"Source: `results/{name}`", ""]
         out["sources"][key] = name
         out[key] = s
@@ -225,6 +244,14 @@ def build():
         first = next(iter(sp.values()))
         md += ["## AgentDojo attack selection (B0 only)", "Source: `results/analysis_agentdojo_spike.json`", "",
                f"User tasks 0–{first['user_tasks'] - 1}, 1 injection task each, seed {first['seed']}.", ""]             + spike_table(sp) + [""]
+    spm = load("analysis_agentdojo_spike_models.json")
+    if spm:
+        out["sources"]["agentdojo_spike_models"] = "analysis_agentdojo_spike_models.json"
+        out["agentdojo_spike_models"] = spm
+        first = next(iter(next(iter(spm.values())).values()))
+        md += ["## AgentDojo spike: model x attack (B0 only)", "Source: `results/analysis_agentdojo_spike_models.json`",
+               "", f"User tasks 0–{first['user_tasks'] - 1}, 1 injection task each, seed {first['seed']}. "
+               "Each cell: B0 attack success; injection reached the model; episodes that timed out.", ""]             + spike_models_table(spm) + [""]
     (RESULTS / "final_tables.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
     (RESULTS / "final_tables.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     print(f"wrote results/final_tables.json and .md from {len(out['sources'])} sources: {sorted(out['sources'])}")

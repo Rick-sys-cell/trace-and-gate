@@ -109,6 +109,8 @@ def main(argv=None) -> int:
     ap.add_argument("--smoke", action="store_true", help="1 benign + 1 attack task on b0")
     ap.add_argument("--resume", metavar="RUN_ID", help="continue an interrupted run; finished episodes are skipped")
     ap.add_argument("--label", default="", help="suffix for the extra summary copy, e.g. heldout")
+    ap.add_argument("--agent", choices=["ours", "camel"], default="ours",
+                    help="camel: a CAMEL-AI ChatAgent behind the same gate (src/camel_agent.py)")
     args = ap.parse_args(argv)
     if args.smoke:
         args.tasks, args.configs, args.runs = str(BENCH / "tasks" / "smoke.json"), ["b0"], 1
@@ -122,6 +124,9 @@ def main(argv=None) -> int:
     # Numbers-only copy of every row (no model text): safe to read, and the source for --resume.
     progress_path = RESULTS / "progress" / f"{run_id}.jsonl"
     llm = OllamaChat()
+    episode = run_episode
+    if args.agent == "camel":
+        from camel_agent import run_camel_episode as episode  # camel-ai is installed in the image only
     rows = [json.loads(l) for l in progress_path.read_text(encoding="utf-8").splitlines() if l.strip()] \
         if args.resume and progress_path.exists() else []
     done = {(r["config"], r["run"], r["task_id"]) for r in rows}
@@ -140,7 +145,7 @@ def main(argv=None) -> int:
                         continue
                     task_r = resolve(task, payloads)
                     world = EmailWorld.from_spec(task_r["world"])
-                    log = run_episode(task_r, world, llm, get_defense(cfg, llm))
+                    log = episode(task_r, world, llm, get_defense(cfg, llm))
                     s = score(world, task_r)
                     row = {"task_id": task["id"], "type": task["type"], "config": cfg, "run": run,
                            "utility": s["utility"], "attack_success": s["attack_success"],
@@ -168,7 +173,7 @@ def main(argv=None) -> int:
 
     summary = {"run_id": run_id, "model": llm.model, "ollama_version": getattr(llm, "version", lambda: "unknown")(),
                "code_version": os.environ.get("GIT_COMMIT", "unknown"), "tasks_file": Path(args.tasks).name,
-               "runs": args.runs, "aborted": aborted, "configs": summarise(rows)}
+               "runs": args.runs, "agent": args.agent, "aborted": aborted, "configs": summarise(rows)}
     text = json.dumps(summary, indent=2)
     (RESULTS / "summary.json").write_text(text, encoding="utf-8")
     if args.label:

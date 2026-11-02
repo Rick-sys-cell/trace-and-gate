@@ -84,10 +84,10 @@ def describe_call(call) -> str:
     return f"{call['tool']}({', '.join(parts)})"
 
 
-def run_config(cfg, task, llm, show_text, reader=None):
+def run_config(cfg, task, llm, show_text, reader=None, episode=run_episode):
     world = EmailWorld.from_spec(task["world"])
     print(c(f"\n── {NAMES.get(cfg, cfg)} " + "─" * max(0, 50 - len(NAMES.get(cfg, cfg))), BOLD))
-    log = run_episode(task, world, llm, get_defense(cfg, reader))  # reader: B1's quarantined model
+    log = episode(task, world, llm, get_defense(cfg, reader))  # reader: B1's quarantined model
     s = score(world, task)
     attempted = False
     for i, call in enumerate(log["calls"], 1):
@@ -124,7 +124,15 @@ def main(argv=None) -> int:
     ap.add_argument("--show-email", action="store_true", help="print the poisoned email (audience only)")
     ap.add_argument("--show-text", action="store_true", help="print the agent's final answer (audience only)")
     ap.add_argument("--list", action="store_true", help="list attack tasks that work well in a demo")
+    ap.add_argument("--agent", choices=["ours", "camel"], default="ours",
+                    help="camel: a CAMEL-AI ChatAgent behind the same gate (src/camel_agent.py)")
     args = ap.parse_args(argv)
+    episode = run_episode
+    if args.agent == "camel":
+        from camel_agent import run_camel_episode as episode  # camel-ai is installed in the image only
+        if "b1" in args.configs:
+            print("b1 is not run with the CAMEL agent: it rewires the planner")
+            return 2
 
     tasks = {t["id"]: t for t in json.loads(Path(args.suite).read_text(encoding="utf-8"))}
     if args.list:
@@ -149,7 +157,8 @@ def main(argv=None) -> int:
             text = e.get("attachment") or e["body"]
             print("  " + text.replace("\n", "\n  "))
     print(c("Mode: " + ("scripted hijacked agent (no model)" if args.oracle else "live model "
-                        + os.environ.get("MODEL", "qwen3:8b")), DIM))
+                        + os.environ.get("MODEL", "qwen3:8b"))
+            + ("; agent: CAMEL-AI ChatAgent" if args.agent == "camel" else ""), DIM))
 
     if args.oracle and "b1" in args.configs:
         print("b1 needs --live: its quarantined reader is a model")
@@ -164,7 +173,8 @@ def main(argv=None) -> int:
         else:
             from llm import OllamaChat
             llm = OllamaChat()
-        hijacked[cfg] = run_config(cfg, task, llm, args.show_text, reader=None if args.oracle else llm)
+        hijacked[cfg] = run_config(cfg, task, llm, args.show_text, reader=None if args.oracle else llm,
+                                   episode=episode)
 
     print(c("\nSummary: ", BOLD) + "   ".join(
         f"{NAMES.get(k, k).split()[0]} {c('hijacked', RED) if v else c('safe', GREEN)}" for k, v in hijacked.items()))

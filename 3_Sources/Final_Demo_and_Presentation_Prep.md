@@ -7,7 +7,7 @@ Trace and Gate · ESP3201A · Week 12, Fri 6 Nov 2026 · for Rui (demo) and Khad
 - **Who:** Rui presents slides 1–7 (the demo video is slide 6) and 15–16; Khadijah presents slides 8–14. About one minute per main slide plus about one and a half minutes for the demo: about 17 minutes, then questions. The plain-language guide (`3_Sources/Guide_Presentation_Simple.md`) explains every slide and term. Check this against our time slot and cut backup detail first if it is shorter.
 - **What the demo shows:** one poisoned email, four agents. With no defense the agent is hijacked; D2, D1h and D1h+D2 each stop it; Alex's own task is still done in all four.
 - **How:** slide 6 plays a recording (63 seconds) of a real live run, made on 29 Oct 2026 on the project desktop: the real model (Qwen3-8B) inside the sandbox, running `docker compose run --rm agent python src/demo.py --live --show-email`. Decided 29 Oct: no live run in class, so nothing depends on Docker, Ollama or memory on the day.
-- **If the video will not play:** open the MP4 from the desktop or the USB stick (section 6); slide 7 shows the same run as an annotated screenshot anyway, and backup slide 24 shows it as a table.
+- **If the video will not play:** open the MP4 from the desktop or the USB stick (section 6); slide 7 shows the same demo as an annotated screenshot anyway, and backup slide 24 shows it as a table.
 - **Key line:** "Same email, same model; only the gate changes."
 
 What was checked: on 27 Oct 2026 a fresh clone from GitHub, set up by following `docs/DEMO_GUIDE.md`, ran `--live` three times in a row on the project desktop (16 GB RAM, AMD RX 6750 GRE, Qwen3-8B): B0 hijacked, every defense safe, Alex's task done under all four, about 30 seconds per run. The recording on 29 Oct is one more such run.
@@ -59,7 +59,7 @@ Click the video to play; click it again, or press space, to pause. Pause on the 
 
 | Problem | Do this |
 |---|---|
-| The video on slide 6 does not play | Leave the slideshow (Esc), switch to the MP4 you left open in the media player and play it full screen; then go back to slide 7. Or skip straight to slide 7: it shows the same run as a screenshot. |
+| The video on slide 6 does not play | Leave the slideshow (Esc), switch to the MP4 you left open in the media player and play it full screen; then go back to slide 7. Or skip straight to slide 7: it shows the same demo as a screenshot. |
 | No media player, or the file is missing | Use slide 7, or backup slide 24: it shows the same calls and decisions as a table (the scripted agent). |
 | The video plays but is hard to read | Pause on the B0 block and read the decision words out loud. |
 | Someone asks to see it live | Only if there is time and a prepared machine: follow `docs/DEMO_GUIDE.md` (Docker, Ollama, about 30 seconds per run). Otherwise offer it after the session. |
@@ -78,6 +78,8 @@ All checked against `sandbox/results/final_tables.md` and the report. Do not quo
 | Second model (Qwen2.5-7B, 1 run) | 29.3% (17/58) with no defense; 0/58 with every defense |
 | Harmless links (40 tasks, 3 runs) | normal tasks 88.3% no defense; 40.0% D1h+D2; 55.0% D1h-L (exploratory) |
 | AgentDojo workspace | attack worked 2/160 with no defense (too few to test safety); utility 27.5% no defense, 30.0% D1h+D2, 12.5% B1 |
+| AgentDojo trial (3 models × stock / "test" attack) | best 1/24, every new cell 0/24; bar was 3/24, so no rerun |
+| CAMEL-AI agent, held-out, 1 run | attack worked 20.7% (12/58) with no defense, 0/58 under every defense; normal tasks 89.3% everywhere; LLMail part 30% (12/40), above the 10% bar |
 
 ## 9. Questions to expect
 
@@ -101,9 +103,9 @@ All checked against `sandbox/results/final_tables.md` and the report. Do not quo
 
 **How did you use AI tools?** Claude Code wrote code to our specifications and helped edit the report and slides; it was blocked from reading attack payloads and raw transcripts. The one exception: after the freeze, at our request, it replaced the target email's name in 8 of our 18 held-out attacks, so it saw those 8. This is disclosed in the report.
 
-**What is the CAMEL-AI slide about?** The consultation asked us to bring CAMEL-AI, an open-source agent framework, into the sandbox. We replaced our own agent loop with CAMEL-AI's ChatAgent and kept the model, gateway, container and gate the same; a test shows the gate makes the same decisions. CAMEL-AI is not CaMeL: CaMeL is a defense from Google DeepMind, which we list as future work.
+**What is the CAMEL-AI slide about?** The consultation asked us to bring CAMEL-AI, an open-source agent framework, into the sandbox. We replaced our own agent loop with CAMEL-AI's ChatAgent and kept the model, gateway, container and gate the same; a test shows the gate makes the same decisions. On the held-out set CAMEL-AI was hijacked in 20.7% of attacks with no defense and 0% behind every defense, with no loss of normal tasks (89.3%). CAMEL-AI is not CaMeL: CaMeL is a defense from Google DeepMind, which we list as future work.
 
-**Did you try the professor's AgentDojo suggestion?** Yes: an attack that frames the instruction as a test the user set up, on three local models (slide 11). We fixed the bar before running: a full rerun only if a combination reached 3 of 24.
+**Did you try the professor's AgentDojo suggestion?** Yes: an attack that frames the instruction as a test the user set up, on three local models (slide 11). We fixed the bar before running: a full rerun only if a combination reached 3 of 24. None did: every new combination was 0 of 24, so these small models simply ignore AgentDojo's attacks.
 
 **How do I know it runs in a container?** Slide 4: the real `docker ps` and `docker inspect` output (user 10001, read-only, all capabilities dropped, internal network) and the 16-point isolation check.
 

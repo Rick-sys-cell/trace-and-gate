@@ -382,19 +382,23 @@ def s_demo_proved(s, D):
     v, done, n = demo_verdicts(lines)
     defended = [k for k in v if k != "B0"]
     all_safe = bool(defended) and all(v[k] == "safe" for k in defended)
+    blocked = any("BLOCKED" in l for l in lines)  # did D1h refuse a forward in this capture, or did the agent not try?
     side_cards(s, [
         ("B0: hijacked" if v.get("B0") == "hijacked" else f"B0: {v.get('B0', PENDING)}",
          "The bank login was forwarded; Alex noticed nothing", "red"),
-        ("Gate: blocked" if all_safe else PENDING,
-         "D2 hid the forward; D1h refused it (never asked)", "green"),
+        (("Gate: blocked" if blocked else "Gate: safe") if all_safe else PENDING,
+         "D2 hid the forward; D1h refused it (never asked)" if blocked
+         else "D2 hid the forward; under D1h the agent did not try it", "green"),
         (f"{done} of {n}" if n else PENDING, "configurations still did Alex’s task", "blue")])
-    mode = "the live run" if live else "the scripted agent, which always obeys the attack"
-    return (f"Here is the same run as a screenshot, from {mode}, with the key lines boxed. (pause) Red: with no "
+    mode = "a live run captured this week" if live else "the scripted agent, which always obeys the attack"
+    d1h = ("and with D1h the forward was BLOCKED, with the reason printed: Alex never asked to forward." if blocked else
+           "and with D1h, in this run, the agent did not even try the forward. In the video it did try, and D1h "
+           "blocked it. When the agent does try, D1h blocks it: every time, in all our held-out runs.")
+    return (f"Here is the same demo as a screenshot, from {mode}, with the key lines boxed. (pause) Red: with no "
             "defense, the forward of the bank login was ALLOWED. The agent then answered Alex normally, so Alex would "
-            "never know. (pause) Green: with D2 the forward tool was hidden, and with D1h the forward was BLOCKED, "
-            "with the reason printed: Alex never asked to forward. (pause) Blue: in every row Alex's own question "
-            "was still answered. So the defenses stop the attack, not the work. One demo is one example, so next "
-            "Khadijah shows how we tested it at scale. Over to Khadijah.\n\n"
+            f"never know. (pause) Green: with D2 the forward tool was hidden, {d1h} (pause) Blue: in every row Alex's "
+            "own question was still answered. So the defenses stop the attack, not the work. One demo is one "
+            "example, so next Khadijah shows how we tested it at scale. Over to Khadijah.\n\n"
             "Key line: Blocked the attack, kept the work.")
 
 
@@ -565,19 +569,20 @@ def s_generalise(s, D):
                "comes from each task's ground truth, an upper bound." if a0 and a1 and "b1" in ad["configs"]
                else f"Second, AgentDojo's workspace suite: {PENDING}.")
     if (sp := D.t.get("agentdojo_spike")) and ad_text.startswith("Second, AgentDojo's workspace suite, a"):
-        others = {k: a for k, a in sp.items() if k != "important_instructions"}
+        others = {k: a for k, a in sp.items() if k not in ("important_instructions", "test_framing")}  # test_framing is ours
         hits = sum(a["asr"]["k"] for a in others.values())
         ad_text += (f" We also tried the {len(others)} other AgentDojo attacks with no defense on "
                     f"{next(iter(sp.values()))['user_tasks']} tasks each: {hits or 'no'} successes, although the "
                     "injection reached the model in most episodes. So the model ignores these attacks; it is not "
                     "our plumbing.")
-    done = {(m, a): c["asr"] for m, v in sm.items() for a, c in v.items()}
+    done = {(m, a): c["asr"] for m, v in sm.items() for a, c in v.items()
+            if a in ("important_instructions", "test_framing")}  # the two columns of the table
     if len(done) == 2 * len(SPIKE_MODELS):
         (bm, ba), best = max(done.items(), key=lambda kv: kv[1]["k"])
         names = dict(SPIKE_MODELS)
         ad_text += (" (pause) The professor suggested framing the attack as a test the user set up, and trying "
                     "other models. The bottom table is that trial, with no defense. "
-                    + (f"The best was {k_n(best)}, {names[bm]} with the "
+                    + (f"The best was {k_n(best)}, {names[bm].replace(' (main)', '')} with the "
                        f"{'test framing' if ba == 'test_framing' else 'stock attack'}. "
                        + (f"That passed our pre-set bar of 3 out of 24, so we reran the full benchmark on it."
                           if best["k"] >= 3 else "None reached our pre-set bar of 3 out of 24, so small local models "
@@ -631,7 +636,7 @@ def s_camel(s, D):
             "for building AI agents. (pause) We swapped our own agent loop for CAMEL-AI's ChatAgent, and kept "
             "everything else the same: same model, same gateway, same container, and every tool call still goes "
             f"through our gate. The screenshot is {what}: with no defense the forward goes through; with any of our "
-            "defenses it is blocked; and Alex's task is still done. (pause) " + res +
+            "defenses it never happens; and Alex's task is still done. (pause) " + res +
             "Careful with the name: CAMEL-AI, the agent framework, is not CaMeL, a defense from Google DeepMind. "
             "CaMeL is future work.\n\nKey line: The gate does not care which agent is behind it.")
 
@@ -641,6 +646,7 @@ def spike_note(D) -> str:
     sp = D.t.get("agentdojo_spike")
     if not sp:
         return ""
+    sp = {k: a for k, a in sp.items() if k != "test_framing"}  # our own template, not one of AgentDojo's attacks
     n = next(iter(sp.values()))["user_tasks"]
     best = max(a["asr"]["k"] for a in sp.values())
     return f" {len(sp)} AgentDojo attacks tried with no defense: at most {best}/{n} succeeded each."

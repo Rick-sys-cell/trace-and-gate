@@ -69,7 +69,7 @@ If either check says no, the action is blocked. The AI gets a neutral "not permi
 
 **6. Demo video (Rui).** A 63-second recording of a live run. Click to play. Point out: B0 ALLOWED → hijacked; D2 hides the forward; D1h BLOCKED; Alex's task done in all four rows.
 
-**7. What the demo proved (Rui). New.** The same run as a screenshot with the key lines boxed: red is the attack getting through, green is the gate blocking it, blue is Alex's task still done. Hand over to Khadijah.
+**7. What the demo proved (Rui). New.** The same demo as a screenshot of a live run captured on 3 Nov, with the key lines boxed: red is the attack getting through, green is each defense staying safe, blue is Alex's task still done. In this run the D1h agent did not even try the forward (in the video it tried and D1h blocked it). Live runs vary a little; the decisions do not. Hand over to Khadijah.
 
 **8. Benchmark and test setup (Khadijah).** Four test sets. The important idea: we froze the defenses first, then built the held-out attacks, so we could not tune to the test. A program scores each run from the final mailbox.
 
@@ -77,9 +77,9 @@ If either check says no, the action is blocked. The AI gets a neutral "not permi
 
 **10. Held-out results (Khadijah).** The main result. 21.8% (38/174) → 0% under every defense, pooled over 3 runs. Normal tasks: 89.3% → 91.7% with D1h+D2. Honest caveat: our own 18 team-written attacks never worked even with no defense (0/54). All 38 successes came from real LLMail emails (31.7% of them worked with no defense).
 
-**11. Does it carry over? (Khadijah).** Second model, Qwen2.5-7B: 29.3% → 0%. AgentDojo: its stock attack almost never worked on our small model (2 of 160), so it cannot test protection; it does show no usefulness cost (28% → 30%; Dual-LLM 12%). The bottom table is the professor's suggestion: a "this is a test" framing of the attack and two more models. *(Fill in after Tuesday: the best cell, and whether it passed our pre-set bar of 3/24.)*
+**11. Does it carry over? (Khadijah).** Second model, Qwen2.5-7B: 29.3% → 0%. AgentDojo: its stock attack almost never worked on our small model (2 of 160), so it cannot test protection; it does show no usefulness cost (28% → 30%; Dual-LLM 12%). The bottom table is the professor's suggestion: a "this is a test" framing of the attack and two more models (Qwen2.5-7B, Llama 3.1 8B). Every new cell was 0/24; the best of all is still 1/24 (Qwen3-8B, stock attack). None reached our pre-set bar of 3/24, so there was no full rerun: small local models simply ignore AgentDojo's attacks.
 
-**12. CAMEL-AI in our sandbox (Khadijah). New.** We replaced our own agent loop with CAMEL-AI's agent and kept everything else the same. A test shows the gate makes exactly the same decisions. The screenshot: hijacked with no defense, blocked by every defense, task still done. *(Add the held-out numbers if the run finished.)* Do not mix up CAMEL-AI and CaMeL. *Key line: the gate does not care which agent is behind it.*
+**12. CAMEL-AI in our sandbox (Khadijah). New.** We replaced our own agent loop with CAMEL-AI's agent and kept everything else the same. A test shows the gate makes exactly the same decisions. The screenshot (live run, 3 Nov): hijacked with no defense, safe under every defense, task still done. Held-out set, 1 run: 20.7% (12/58) of attacks worked with no defense, 0/58 under every defense; normal tasks 89.3% in every configuration. The zero is earned here too: CAMEL-AI tried the attacker's action 12 times under D1h and 6 times under D1h+D2, and every try was blocked. The LLMail attacks worked 30% (12/40) of the time with no defense, above our pre-set 10% bar, so this counts as real protection, not an attack that failed by itself. Do not mix up CAMEL-AI and CaMeL. *Key line: the gate does not care which agent is behind it.*
 
 **13. Harmless links (Khadijah).** The cost: D1h blocks a harmless link copied from one email into a new message, because it cannot tell a Zoom link from a phishing link. Asking for the link or forwarding the email still works. D1h-L, an exploratory fix, recovers 75% of that flow.
 
@@ -103,6 +103,8 @@ If either check says no, the action is blocked. The AI gets a neutral "not permi
 | Team-written attacks, no defense | 0/54 |
 | Qwen2.5-7B, no defense → every defense | 29.3% (17/58) → 0/58 |
 | AgentDojo, no defense | 2/160 attacks; utility 27.5% (D1h+D2 30.0%, Dual-LLM 12.5%) |
+| AgentDojo trial: 3 models × 2 attacks, no defense | best 1/24; every new cell 0/24 (bar was 3/24, so no rerun) |
+| CAMEL-AI agent, held-out, no defense → every defense | 20.7% (12/58) → 0/58; normal tasks 89.3% everywhere; LLMail part 30% (12/40) |
 | "Send the link from Jane's email": B0 / D1h / D1h-L | 75% / 0% / 75% |
 | Isolation checks | 16/16 |
 | Defenses frozen | 24 October 2026 |
@@ -116,8 +118,8 @@ If either check says no, the action is blocked. The AI gets a neutral "not permi
 3. **Who writes the D2 policy for each task?** In our benchmark we wrote one short allowlist per task type. In a real product it would come from the app's task templates. This is a real cost, and we say so.
 4. **Can an attacker get around D1h?** An attacker who knows the rules has targets. For example, if the user names an email, things in that email may become trusted. We did not test adaptive attackers. That is our main limit.
 5. **Why did your own attacks never work?** Qwen3-8B resisted the styles we wrote. That is why we report the LLMail part separately (31.7%). Our attacks still show the defenses cause no harm on them.
-6. **Why is AgentDojo's attack rate so low?** Its attacks barely work on small local models: 2 of 160. We tried the professor's "this is a test" framing and two more models. *(Give the result from slide 11.)* With so few successes, AgentDojo can only show cost, not protection.
-7. **What is CAMEL-AI, and why add it?** A popular framework for building agents. It shows the gate is not tied to our own agent code: we swapped the agent, and the gate decided exactly the same way.
+6. **Why is AgentDojo's attack rate so low?** Its attacks barely work on small local models: 2 of 160. We tried the professor's "this is a test" framing and two more models: 0/24 in every new cell, so none passed our pre-set bar of 3/24. These models just ignore AgentDojo's attacks; the injection did reach the model in most episodes, so it is not our plumbing. With so few successes, AgentDojo can only show cost, not protection.
+7. **What is CAMEL-AI, and why add it?** A popular framework for building agents. It shows the gate is not tied to our own agent code: we swapped the agent, and the gate decided exactly the same way. On the held-out set CAMEL-AI was hijacked 20.7% of the time with no defense and 0% behind any of our defenses, almost the same as our own agent (21.8% → 0%).
 8. **Is CAMEL-AI the same as CaMeL?** No. CAMEL-AI builds agents; CaMeL is a defense from Google DeepMind. CaMeL is closest to our idea and is future work.
 9. **How is your work different from CaMeL?** CaMeL rewrites the task as a program and tracks every value through an interpreter, which is stricter but needs more machinery. Ours is a light gate on ordinary tool calls, with no extra AI calls. Comparing the two on the same tasks is next.
 10. **How do you know the sandbox is really isolated?** The isolation script checks 16 things every time (no internet, no DNS, not root, read-only, gateway blocks model downloads), and slide 4 shows the container settings.
@@ -131,5 +133,5 @@ If either check says no, the action is blocked. The AI gets a neutral "not permi
 
 ## 6. If something goes wrong on the day
 
-- **Video does not play:** go to slide 7 (the same run as a screenshot), or open `Trace_and_Gate_demo_backup.mp4` from the desktop.
+- **Video does not play:** go to slide 7 (the same demo as a screenshot), or open `Trace_and_Gate_demo_backup.mp4` from the desktop.
 - **Asked about a backup topic:** the backup slides start at 17: sandbox settings (17), how D1h decides (18), exposure and attempts (19), where attacks get in (20), failure analysis (21), cost per episode (22), safety and ethics (23), the demo as a table (24), how a test run works (25), how the LLMail attacks were chosen (26).

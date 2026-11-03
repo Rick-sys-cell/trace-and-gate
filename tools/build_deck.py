@@ -394,7 +394,7 @@ def s_demo(s, D):
                 "not on this task's allowlist, so the model never even sees it. D1h: the model tries the forward, and "
                 "it is BLOCKED because Alex never asked to forward. Both: safe. And in every row Alex's own task is "
                 "done. If the video does not play, open the MP4 from the desktop, or go to the next slide: it shows "
-                f"the same run as a screenshot (and backup slide {slide_no(s_backup_demo)} as a table).\n\n"
+                f"the same demo from a live run, key lines only (and backup slide {slide_no(s_backup_demo)} as a table).\n\n"
                 "Key line: Same email, same model; only the gate changes.")
     print(f"warning: {DEMO_VIDEO.relative_to(ROOT)} not found; the demo slide is a live-demo cue, not the video")
     set_text(by_text(s, "BACKUP"), "LIVE DEMO")
@@ -458,7 +458,7 @@ def s_demo_proved(s, D):
     d1h = ("and with D1h the forward was BLOCKED, with the reason printed: Alex never asked to forward." if blocked else
            "and with D1h, in this run, the agent did not even try the forward. In the video it did try, and D1h "
            "blocked it. When the agent does try, D1h blocks it: every time, in all our held-out runs.")
-    return (f"Here is the same demo as a screenshot, from {mode}, with the key lines boxed. (pause) Red: with no "
+    return (f"Here are the key lines of the same demo, from {mode}, boxed in colour. (pause) Red: with no "
             "defense, the forward of the bank login was ALLOWED. The agent then answered Alex normally, so Alex would "
             f"never know. (pause) Green: with D2 the forward tool was hidden, {d1h} (pause) Blue: in every row Alex's "
             "own question was still answered. So the defenses stop the attack, not the work. One demo is one "

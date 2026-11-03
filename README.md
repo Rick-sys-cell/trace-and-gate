@@ -28,7 +28,8 @@ Held-out attacks, written after the defenses were frozen (git tag `defenses-froz
 - Development suite v3 (run `20261024-135826`, 97 attacks): B0 45.4% (44/97); every defense 0%; normal tasks 89.3% for B0 and D1h+D2.
 - Second model, Qwen2.5-7B (run `20261025-071911`): B0 29.3% (17/58); every defense 0/58.
 - Cost: on 40 harmless tasks with links (run `20261025-055650`), normal tasks fall from 88.3% (B0) to 40.0% (D1h+D2), because D1h blocks links copied out of emails. An exploratory, post-freeze fix (D1h-L) reaches 55.0%.
-- AgentDojo workspace (run `agentdojo_20261025-075616`): its attack worked in only 2/160 episodes even without a defense, so it measures cost, not safety: utility 27.5% (B0) vs 30.0% (D1h+D2).
+- AgentDojo workspace (run `agentdojo_20261025-075616`): its attack worked in only 2/160 episodes even without a defense, so it measures cost, not safety: utility 27.5% (B0) vs 30.0% (D1h+D2). A B0 trial of 3 local models (Qwen3-8B, Qwen2.5-7B, Llama 3.1 8B) × the stock attack and one reframed as a test (2 Nov) found at most 1/24, below the pre-set 3/24 bar.
+- Second agent framework: a [CAMEL-AI](https://www.camel-ai.org/) `ChatAgent` behind the same, unchanged gate (`src/camel_agent.py`; run `20261102-151939`, held-out, 1 run): attack success 20.7% (12/58) with no defense, 0/58 under D2, D1h and D1h+D2; normal tasks 89.3% in every configuration. (CAMEL-AI, the agent framework, is not CaMeL, the defense.)
 
 All numbers: [`sandbox/results/final_tables.md`](sandbox/results/final_tables.md).
 
@@ -41,7 +42,7 @@ agent container ──(internal network, no internet)──► nginx gateway ─
   read-only fs, non-root, no capabilities              whitelists only the inference endpoints
 ```
 
-- `sandbox/src/`: agent loop (`agent.py`), simulated mailbox (`email_env.py`), defenses (`defenses.py`), scoring, runner (`run_eval.py`), analysis, live demo (`demo.py`), isolation check, AgentDojo bridge (`agentdojo_bridge.py`, `run_agentdojo.py`).
+- `sandbox/src/`: agent loop (`agent.py`), simulated mailbox (`email_env.py`), defenses (`defenses.py`), scoring, runner (`run_eval.py`), analysis, live demo (`demo.py`), isolation check, AgentDojo bridge (`agentdojo_bridge.py`, `run_agentdojo.py`), CAMEL-AI agent (`camel_agent.py`; `run_eval.py --agent camel`, `demo.py --agent camel`).
 - `sandbox/benchmark/`: `build_suite.py` generates the tasks; `import_llmail.py` samples real attacks from [LLMail-Inject](https://huggingface.co/datasets/microsoft/llmail-inject-challenge).
 - `sandbox/tests/`: offline unit tests, including oracle replays of every scripted hijack against each defense.
 - `sandbox/results/`: numbers-only summaries and figures.
@@ -66,6 +67,9 @@ docker compose run --rm agent python src/demo.py --live     # real model
 python -m unittest discover -s tests                         # offline tests
 ```
 
+Inside the container, camel-ai installs its own top-level `tests` package, which shadows ours; run container tests with
+`docker compose run --rm --no-deps -v "$PWD/tests:/opt/experiment/tests:ro" -e PYTHONPATH=/opt/experiment/tests:/opt/experiment/src agent python -m unittest discover -s tests -p "test_camel_agent.py"`.
+
 **Long runs on a 16 GB Windows host.** Ollama's runner process grows during long runs. Start the memory guard
 first (PowerShell, from the repo root): `Start-Process pythonw -ArgumentList 'tools/memory_guard.py','--container','<name>'`,
 then launch the run with `docker compose run -d --name <name> ...`. While free RAM is under 2 GB or Ollama is
@@ -77,5 +81,6 @@ over 7 GB, the guard sets a flag; between episodes the AgentDojo runner unloads 
 ## AI use
 
 Claude (Anthropic), through Claude Code, was used as a tool to write code to our specifications and to help
-draft and summarise. Every reported number was checked against the result files. See
+draft and summarise. It also wrote, after the defenses were frozen, the AgentDojo attack template that frames the
+injection as a test (git-ignored like all attack text). Every reported number was checked against the result files. See
 [`3_Sources/AI_Declaration.md`](3_Sources/AI_Declaration.md).

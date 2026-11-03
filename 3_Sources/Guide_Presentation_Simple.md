@@ -85,7 +85,7 @@ If either check says no, the action is blocked. The AI gets a neutral "not permi
 
 **14. Hypotheses scorecard (Khadijah).** Validity: 21.8% overall is below our 30% bar, but the LLMail part is 31.7%. H1 met. H2 met (+2.4 points). Against Dual-LLM: both stop every attack, but ours does significantly more normal tasks (91.7% vs 80.4%). Hand back to Rui.
 
-**15. Limits and future work (Rui).** Adaptive attackers are untested. The link cost. CaMeL as the defense to compare against next. SETA for terminal agents. We make no claim about anything in this table.
+**15. Limits and future work (Rui).** Adaptive attackers are untested. The link cost. CaMeL as the defense to compare against next. SETA for terminal agents. Four cards, each with a coloured "Next:" step; the line under them lists what is out of scope (supply chain, a malicious user, memory poisoning).
 
 **16. Takeaways (Rui).** (1) Decide outside the model, in code. (2) Two checks do two jobs: D2 removes what the task doesn't need; D1h catches attacker content inside allowed actions. (3) Measure the cost on harmless work, not only on attacks. Thank you.
 

@@ -49,13 +49,13 @@ def colour(line: str) -> str:
     return FG
 
 
-def render(name: str, title: str, lines: list[str], boxes: list[tuple[str, str, str]], caption: str):
+def render(name: str, title: str, lines: list[str], boxes: list[tuple[str, str, str]], caption: str, size: int = SIZE):
     """boxes: (regex, colour, label). Every line matching a regex gets a box; the label is drawn once."""
-    f = ImageFont.truetype(FONT, SIZE * SCALE)
+    f = ImageFont.truetype(FONT, size * SCALE)
     width_ch = min(MAX_CH, max(len(l) for l in lines))
     lines = [l if len(l) <= width_ch else l[:width_ch - 1] + "…" for l in lines]
     ch_w = f.getbbox("M")[2]
-    lh = int(SIZE * SCALE * LINE)
+    lh = int(size * SCALE * LINE)
     bar = 34 * SCALE
     gutter = max([len(lab) for _, _, lab in boxes if lab] + [0])
     gutter = (gutter + 4) * ch_w if gutter else 0
@@ -189,8 +189,36 @@ def shot_camel():
            stamp() if mode == "--live" else "Scripted agent that obeys the attack (--oracle); no model.")
 
 
+def compact(name: str, title: str):
+    """A large-print excerpt of an already captured demo shot (evidence/<name>.txt), for projection: the
+    command, each configuration's header, the attacker's action and the gate's decision, the verdicts and the
+    summary. No rerun: the lines are copied from the capture, with the step lines in between left out."""
+    src = (OUT / f"{name}.txt").read_text(encoding="utf-8").splitlines()
+    keep = []
+    for l in src:
+        if l.startswith(PROMPT):
+            keep.append("$ " + l[len(PROMPT):].replace("docker compose run --rm agent ", "").strip())
+        elif l.startswith("Mode:"):
+            keep.append(l)
+        elif l.startswith("──"):
+            keep += ["", l.rstrip("─ ")]
+        elif l.startswith("Summary"):
+            keep += ["", l]
+        elif re.search(r"ALLOWED|BLOCKED|^\s+→", l):
+            keep.append(re.sub(r"^\s+\d+\.\s+", "   ", l))
+    keep = [l for l in keep if "own task" not in l]  # one blue line per config is enough on a slide: keep verdicts
+    tail = [l for l in src if "own task: done" in l]
+    keep.append(f"   Alex's own task done in {len(tail)} of {sum(l.startswith('──') for l in src)} configurations")
+    render(f"{name}_compact", title, keep, [(r"ALLOWED", RED, ""), (r"HIJACKED", RED, ""), (r"BLOCKED", GREEN, ""),
+                                            (r"did not follow", GREEN, ""), (r"own task done", BLUE, ""),
+                                            (r"^Summary", YELLOW, "")],
+           "Excerpt: step lines left out. Full output: rerun the command.", size=22)
+
+
 SHOTS = {"isolation": shot_isolation, "container": shot_container, "rules": shot_rules, "demo": shot_demo,
-         "demo_oracle": shot_demo_oracle, "camel": shot_camel}
+         "demo_oracle": shot_demo_oracle, "camel": shot_camel,
+         "demo_compact": lambda: compact("demo", "Live run, key lines: one poisoned email, four agents"),
+         "camel_compact": lambda: compact("camel", "Live run, key lines: the same gate around a CAMEL-AI agent")}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

@@ -168,7 +168,38 @@ def side_cards(s, cards):
                     r.font.color.rgb = RGBColor.from_string(ink)
 
 
-SPIKE_MODELS = [("qwen3:8b", "Qwen3-8B (main)"), ("qwen2.5:7b", "Qwen2.5-7B"), ("llama3.1:8b", "Llama 3.1 8B")]
+def _tb(s, left, top, width, text, pt, rgb="0F172A", bold=False, italic=False, height=0.3):
+    """A borderless text box in the deck's style (Calibri, no insets, grows with its text)."""
+    from pptx.enum.text import MSO_AUTO_SIZE
+    tb = s.shapes.add_textbox(Inches(left), Inches(top), Inches(width), Inches(height))
+    tf = tb.text_frame
+    tf.word_wrap = True
+    tf.auto_size = MSO_AUTO_SIZE.SHAPE_TO_FIT_TEXT
+    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
+    r = tf.paragraphs[0].add_run()
+    r.text = text
+    r.font.size, r.font.bold, r.font.italic, r.font.name = Pt(pt), bold, italic, "Calibri"
+    r.font.color.rgb = RGBColor.from_string(rgb)
+    return tb
+
+
+def card(s, left, top, width, height, big, small, tint="blue", big_pt=20, small_pt=13):
+    """A rounded callout card like the template's: tinted fill, big number or title, one short line under it."""
+    fill, ink = CARD_TINT.get(tint, ("F1F5F9", "0F172A"))
+    box = _shape(s, MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height, fill)
+    box.adjustments[0] = 0.08
+    _tb(s, left + 0.17, top + 0.08, width - 0.3, big, big_pt, rgb=ink, bold=True)
+    _tb(s, left + 0.17, top + 0.08 + big_pt / 72 * 1.25, width - 0.3, small, small_pt, rgb="475569")
+    return box
+
+
+def right_cards(s, cards, top=1.15, height=1.1, gap=0.15):
+    """Three stacked cards in the right column, at the same place as the template's callouts."""
+    for i, (big, small, tint) in enumerate(cards):
+        card(s, 6.75, top + i * (height + gap), 2.75, height, big, small, tint)
+
+
+SPIKE_MODELS = [("qwen3:8b", "Qwen3-8B"), ("qwen2.5:7b", "Qwen2.5-7B"), ("llama3.1:8b", "Llama 3.1 8B")]
 
 
 def clone_table(s, shape):
@@ -191,10 +222,20 @@ def demo_poster():
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    fig = plt.figure(figsize=(7.44, 4.0), dpi=200, facecolor="#1e1e1e")
-    fig.text(0.5, 0.58, "▶", ha="center", va="center", fontsize=64, color="white")
-    fig.text(0.5, 0.32, "Recorded live run  ·  Qwen3-8B  ·  29 Oct 2026", ha="center", fontsize=16, color="white")
-    fig.text(0.5, 0.22, "click to play", ha="center", fontsize=12, color="#aaaaaa")
+    from matplotlib.patches import Circle, FancyBboxPatch
+    fig = plt.figure(figsize=(7.44, 4.0), dpi=200, facecolor="#0F172A")
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, 7.44)
+    ax.set_ylim(0, 4.0)
+    ax.axis("off")
+    ax.add_patch(Circle((6.6, 3.7), 1.6, color="#1E3A5F", alpha=0.6))
+    ax.add_patch(Circle((7.2, 2.6), 1.0, color="#155E75", alpha=0.35))
+    ax.add_patch(Circle((3.72, 2.25), 0.62, color="#3B82F6"))
+    ax.text(3.78, 2.25, "▶", ha="center", va="center", fontsize=40, color="white")
+    ax.add_patch(FancyBboxPatch((2.62, 1.18), 2.2, 0.03, boxstyle="square,pad=0", color="#22D3EE"))
+    ax.text(3.72, 0.95, "Recorded live run  ·  Qwen3-8B  ·  29 Oct 2026", ha="center", fontsize=15,
+            color="white", fontweight="bold")
+    ax.text(3.72, 0.6, "One poisoned email, four agents  ·  click to play", ha="center", fontsize=11, color="#94A3B8")
     buf = io.BytesIO()
     fig.savefig(buf, format="png", facecolor=fig.get_facecolor())
     plt.close(fig)
@@ -258,6 +299,10 @@ def s_title(s, D):
 def s_problem(s, D):
     b0 = D.cfg("dev", "b0")
     set_text(by_text(s, "61%"), pct(b0["asr"]) if b0 else PENDING)
+    set_text(by_text(s, "An instruction to forward"), "An instruction to forward the club’s bank-login email to "
+             "records@attacker.example")
+    set_text(by_text(s, "Forwards the bank"), "Forwards the bank-login email to the attacker. Alex sees a normal "
+             "answer.")
     set_text(by_text(s, "of attachment attacks"),
              f"of our development attacks worked with no defense ({k_n(b0['asr']) if b0 else PENDING})")
     return ("An email assistant reads mail from anyone, and it can send, forward and delete for you. That is the "
@@ -396,7 +441,8 @@ def s_demo_proved(s, D):
     set_text(by_text(s, "Rerun: are we on track?"), "What the demo proved, line by line")
     remove(tables(s)[0])
     remove(by_text(s, "Pilot → rerun"))
-    add_pic(s, png, 0.5, 1.1, 6.1, 4.0)
+    big = EVIDENCE / "demo_compact.png"
+    add_pic(s, big if live and big.exists() else png, 0.5, 1.15, 6.05, 3.95)
     v, done, n = demo_verdicts(lines)
     defended = [k for k in v if k != "B0"]
     all_safe = bool(defended) and all(v[k] == "safe" for k in defended)
@@ -454,16 +500,19 @@ def s_tested(s, D):
             "Key line: Frozen first, then tested on attacks the defenses never saw.")
 
 
-def _result_slide(s, D, key, fig, kicker, title, card, caption):
+def _result_slide(s, D, key, fig, kicker, title, cards, caption):
+    """Chart on the left, three big-number cards on the right (the chart already shows every bar, so the
+    interim slide's table of the same numbers is dropped)."""
     set_text(by_text(s, "RESULTS · PILOT"), kicker)
     set_text(by_text(s, "Attacks fell"), title)
     figure(s, fig)
-    rows = [["Config", "Attacks", "Normal"]]
-    for c in CFGS:
-        r = D.cfg(key, c)
-        rows.append([LABEL[c], pct(r["asr"]) if r else PENDING, pct(r["utility"]) if r else PENDING])
-    fill_table(tables(s)[0], rows)
-    set_text(by_text(s, "40% when"), card)
+    remove(tables(s)[0])
+    note = by_text(s, "40% when")
+    box = next(sh for sh in s.shapes if sh.shape_type == 1 and abs(sh.left - note.left) < 914400 * 0.3
+               and abs(sh.top - note.top) < 914400 * 0.2)
+    remove(note)
+    remove(box)
+    right_cards(s, cards)
     set_text(by_text(s, "765 episodes"), caption)
 
 
@@ -471,7 +520,7 @@ def s_dev(s, D):
     d = D.ds("dev")
     if not d:
         _result_slide(s, D, "dev", FIGS / "missing.png", "RESULTS · DEVELOPMENT", "Development: PENDING",
-                      [PENDING], PENDING)
+                      [(PENDING, "", "blue")] * 3, PENDING)
         return PENDING
     b0, dd = d["configs"]["b0"], d["configs"]["d1hd2"]
     m = d["mcnemar"]["d1hd2_vs_b0"]
@@ -481,11 +530,13 @@ def s_dev(s, D):
              + ("no normal task lost" if lost <= 0 else f"{lost} normal tasks lost"))
     errors = sum(c.get("errors_or_caps", 0) or 0 for c in d["configs"].values())
     _result_slide(s, D, "dev", FIGS / "fig1_asr_vs_utility_slide_dev_v3.png", "RESULTS · DEVELOPMENT", title,
-                  [[f"{m['attack']['other_only']} vs {m['attack']['d1hd2_only']}",
-                    f" paired attacks that worked only under B0 vs only under D1h+D2 (p = {pval(m['attack']['p'])})"],
-                   [f"{att.get('blocked', PENDING)}/{att.get('attempted', PENDING)}",
-                    " attempts blocked by D1h+D2"]],
-                  f"{episodes(d)} episodes, {errors} errors · one run per config · bars show 95% intervals")
+                  [(f"{pct(b0['asr'])} → {pct(worst_defended(d))}", "attacks that worked: no defense → any defense",
+                    "green"),
+                   (f"{pct(b0['utility'])} → {pct(dd['utility'])}", "normal tasks done: no defense → D1h+D2", "blue"),
+                   (f"{att.get('blocked', PENDING)}/{att.get('attempted', PENDING)}",
+                    "attacker actions the agent tried under D1h+D2: all blocked", "amber")],
+                  f"{episodes(d)} episodes, {errors} errors, 1 run · 95% intervals · paired test vs B0: "
+                  f"{m['attack']['other_only']} vs {m['attack']['d1hd2_only']}, p = {pval(m['attack']['p'])}")
     return (f"First, development. With no defense, {pct(b0['asr'], 1)} of attacks worked. With any of the four "
             f"defenses, none did. (pause) The zeros are earned: under D1h+D2 the model still tried the attacker's "
             f"action {att.get('attempted', PENDING)} times, and every attempt was blocked. And D1h+D2 completed "
@@ -497,7 +548,7 @@ def s_heldout(s, D):
     d = D.ds("heldout")
     if not d:
         _result_slide(s, D, "heldout", FIGS / "missing.png", "RESULTS · HELD-OUT (3 RUNS)",
-                      "Held-out: PENDING", [PENDING], PENDING)
+                      "Held-out: PENDING", [(PENDING, "", "blue")] * 3, PENDING)
         return PENDING
     b0, dd = d["configs"]["b0"], d["configs"]["d1hd2"]
     worst = worst_defended(d)
@@ -510,14 +561,18 @@ def s_heldout(s, D):
     spread = " / ".join(f"{100 * v['asr']:.0f}%" for v in pr.values()) or PENDING
     drop = 100 * (rate(b0["utility"]) - rate(dd["utility"]))
     title = f"Held-out: attacks {pct(b0['asr'])} → {pct(worst)}, three runs"
-    team_line = (["Team-written: ", f"{k_n(team_b0)} worked even with no defense"] if team_b0 and team_b0["k"] == 0
-                 else ["Team-written: ", f"B0 {k_n(team_b0)}, worst defense {k_n(team_def)}"])
-    _result_slide(s, D, "heldout", FIGS / "fig1_asr_vs_utility_slide_heldout.png", "RESULTS · HELD-OUT (3 RUNS)",
-                  title,
-                  [["LLMail-Inject, B0: ", f"{k_n(ll_b0)} ({pct(ll_b0)})"], team_line, ["B0 per run: ", spread]],
-                  f"{episodes(d)} episodes · 3 runs pooled · bars show 95% intervals")
+    team = (f"team-written {k_n(team_b0)} even with no defense" if team_b0 and team_b0["k"] == 0
+            else f"team-written: B0 {k_n(team_b0)}, worst defense {k_n(team_def)}")
     m = d["mcnemar"].get("d1hd2_vs_b0", {})
     att = (D.diag["heldout"] or {}).get("configs", {}).get("d1hd2", {}).get("all", {})
+    _result_slide(s, D, "heldout", FIGS / "fig1_asr_vs_utility_slide_heldout.png", "RESULTS · HELD-OUT (3 RUNS)",
+                  title,
+                  [(f"{pct(b0['asr'])} → {pct(worst)}", "attacks that worked: no defense → any defense", "green"),
+                   (f"{pct(b0['utility'])} → {pct(dd['utility'])}", "normal tasks done: no defense → D1h+D2", "blue"),
+                   (f"{att.get('blocked', PENDING)}/{att.get('attempted', PENDING)}",
+                    "attacker actions the agent tried under D1h+D2: all blocked", "amber")],
+                  f"{episodes(d)} episodes, 3 runs · 95% intervals · no defense: LLMail {k_n(ll_b0)}, "
+                  + team.replace("team-written", "ours").replace(" even with no defense", ""))
     if team_b0 and team_b0["k"] == 0:
         team_note = (f"(pause) One honest caveat: the {team_b0['n'] // 3} attacks we wrote ourselves never worked, "
                      f"not even with no defense: {k_n(team_b0)}. So they don't test the defenses; all "
@@ -540,7 +595,7 @@ def s_generalise(s, D):
     set_text(by_text(s, "RESULTS · RERUN"), "RESULTS · GENERALISATION")
     set_text(by_text(s, "Rerun: are we on track?"), "Does it carry over? A second model and AgentDojo")
     rows = [["Config", "Qwen2.5 attacks", "Qwen2.5 normal", "AgentDojo attacks", "AgentDojo utility"]]
-    for c in CFGS:
+    for c in ("b0", "b1", "d1hd2"):  # D1h and D2 alone were not run on AgentDojo; on Qwen2.5 see the note
         qc = q["configs"].get(c) if q else None
         ac = ad["configs"].get(c) if ad else None
         rows.append([LABEL[c],
@@ -550,6 +605,9 @@ def s_generalise(s, D):
                      f"{100 * ac['utility']:.0f}%" if ac and ac["utility"] is not None else (PENDING if not ad else "–")])
     main = tables(s)[0]
     fill_table(main, rows, widths=[1.2, 1.2, 1.2, 1.2, 1.2], row_height=0.34)
+    h1 = _tb(s, 0.5, 1.08, 6.0, "With and without the gate: Qwen2.5-7B (held-out, 1 run) and AgentDojo (1 run)",
+             12, rgb="1D4ED8", bold=True)
+    move(main, top=1.36)
     # consultation 30 Oct: frame the injection as a test, and try other models (B0 only, pre-set rule: >= 3/24)
     sm = D.t.get("agentdojo_spike_models") or {}
     spike = clone_table(s, main)
@@ -559,11 +617,14 @@ def s_generalise(s, D):
         spike_rows.append([name] + [k_n(cells[a]["asr"]) if a in cells else PENDING
                                     for a in ("important_instructions", "test_framing")])
     fill_table(spike, spike_rows, widths=[2.0, 2.0, 2.0], row_height=0.3)
-    below(spike, main, gap=0.14)
+    h2 = _tb(s, 0.5, 3.02, 6.0, "Can another attack or model make AgentDojo’s attack work? (no defense, 24 tasks)",
+             12, rgb="1D4ED8", bold=True)
+    move(spike, top=3.3)  # fixed: the two-line header row renders taller than the table's nominal height
     note = by_text(s, "Pilot → rerun")
-    set_text(note, "AgentDojo: workspace suite; D2’s policy there comes from each task’s ground truth (an upper "
-             "bound). Attack table: first 24 tasks, one injection each.")
-    below(note, spike, gap=0.06)
+    qd = [q["configs"][c] for c in ("d1h", "d2") if q and c in q["configs"]]
+    set_text(note, ("Qwen2.5: D1h and D2 alone also stopped every attack. " if qd and all(c["asr"]["k"] == 0 for c in qd)
+                    else "") + "AgentDojo: D2’s policy comes from each task’s ground truth (an upper bound).")
+    move(note, top=4.62)
     qb0 = q["configs"]["b0"] if q else None
     qw = worst_defended(q) if q else None
     set_text(by_text(s, "0% · 0 lost"), f"{pct(qb0['asr'])} → {pct(qw)}" if q else PENDING)
@@ -620,11 +681,12 @@ def s_camel(s, D):
     in >= 10% of LLMail attacks."""
     png, lines = shot("camel")
     live = bool(lines) and not any("scripted hijacked agent" in l for l in lines)
-    set_text(by_text(s, "RESULTS · RERUN"), "NEW · CAMEL-AI")
+    set_text(by_text(s, "RESULTS · RERUN"), "RESULTS · CAMEL-AI")
     set_text(by_text(s, "Rerun: are we on track?"), "CAMEL-AI in our sandbox: new agent, same gate")
     remove(tables(s)[0])
     remove(by_text(s, "Pilot → rerun"))
-    add_pic(s, png, 0.5, 1.1, 6.1, 4.0)
+    big = EVIDENCE / "camel_compact.png"
+    add_pic(s, big if live and big.exists() else png, 0.5, 1.15, 6.05, 3.95)
     c = D.ds("camel")
     if c:
         b0 = c["configs"]["b0"]
@@ -673,7 +735,7 @@ def spike_note(D) -> str:
 def s_links(s, D):
     br = D.t.get("block_reasons_links")
     lk = D.ds("links")
-    set_text(by_text(s, "RESULTS · RERUN"), "COST")
+    set_text(by_text(s, "RESULTS · RERUN"), "RESULTS · COST")
     set_text(by_text(s, "Rerun: are we on track?"), "The cost we almost missed: harmless links")
     flows = [("ask", "Tell me the link"), ("forward", "Forward the email"), ("reply-own", "Reply with my link"),
              ("send-link", "Send Bob the link from Jane"), ("send-noncontact", "… from a stranger’s email")]
@@ -780,27 +842,36 @@ def s_scorecard(s, D):
     set_text(by_text(s, "Sender addresses"), "Attacks that worked: " + "; ".join(f"{n} {k}/{t}" for n, k, t in co)
              + ad_note + "." if co else PENDING)
     set_text(by_text(s, "The attack itself"), "What it costs")
-    set_text(by_text(s, "“Read all and answer”"), "No extra model calls; D2 needs a policy per task; D1h blocks "
-             "links copied from emails (D1h-L: exploratory fix).")
+    set_text(by_text(s, "“Read all and answer”"), "No extra model calls. D2 needs a policy per task. D1h blocks "
+             f"links copied from emails (slide {slide_no(s_links)}).")
+    set_text(by_text(s, "RESULTS"), "RESULTS · SCORECARD")
     return notes
 
 
 def s_scope(s, D):
-    set_text(by_text(s, "RE-SCOPE"), "LIMITS AND FUTURE WORK")
+    set_text(by_text(s, "RE-SCOPE"), "LIMITS · FUTURE WORK")
     set_text(by_text(s, "What changed since"), "What this does not show yet, and what is next")
-    fill_table(tables(s)[0], [
-        ["Open question", "Why it matters", "Next step"],
-        ["Adaptive attackers", "Every attack we ran is fixed; one who knows our rules has targets",
-         "Attack our own rules (red team)"],
-        ["Copied links", f"D1h blocks harmless links copied from emails (slide {slide_no(s_links)})",
-         "Test D1h-L on new data"],
-        ["CaMeL (Google DeepMind)", "A defense that plans in code and tracks data flow: close to ours, stricter",
-         "Compare on the same tasks"],
-        ["SETA (CAMEL-AI)", "Environments for agents that use a terminal; no injection tests yet",
-         "Port the gate to shell tools"],
-        ["Supply chain, malicious user, memory", "Outside both benchmarks", "Out of scope"],
-    ], widths=[2.3, 4.2, 2.5])
-    set_text(by_text(s, "The course brief"), "We make no claim about anything in this table.")
+    remove(tables(s)[0])
+    items = [("Adaptive attackers", "Every attack we ran is fixed. One who knows our rules has targets.",
+              "Next: attack our own rules (red team)", "red"),
+             ("Copied links", f"D1h blocks harmless links copied from emails (slide {slide_no(s_links)}).",
+              "Next: test D1h-L on new data", "amber"),
+             ("CaMeL (Google DeepMind)", "A defense that plans in code and tracks data flow: close to ours, stricter.",
+              "Next: compare on the same tasks", "blue"),
+             ("SETA (CAMEL-AI)", "Environments for agents that use a terminal; no injection tests yet.",
+              "Next: put the gate around shell tools", "green")]
+    for i, (head, why, nxt, tint) in enumerate(items):
+        left, top = 0.5 + (i % 2) * 4.6, 1.15 + (i // 2) * 1.75
+        fill, ink = CARD_TINT[tint]
+        box = _shape(s, MSO_SHAPE.ROUNDED_RECTANGLE, left, top, 4.4, 1.55, "F8FAFC")
+        box.adjustments[0] = 0.06
+        _shape(s, MSO_SHAPE.RECTANGLE, left, top + 0.12, 0.07, 1.31, ink)
+        _tb(s, left + 0.3, top + 0.14, 3.9, head, 17, bold=True)
+        _tb(s, left + 0.3, top + 0.52, 3.9, why, 13, rgb="475569")
+        _tb(s, left + 0.3, top + 1.12, 3.9, nxt, 13, rgb=ink, bold=True)
+    set_text(by_text(s, "The course brief"), "Out of scope for both benchmarks: supply chain, a malicious user, "
+             "memory poisoning.")
+    move(by_text(s, "Out of scope"), top=4.75)
     return ("Rui again. What our results do not show yet. (pause) First, every attack we ran is fixed. None adapts "
             "to our rules, and an attacker who knows them has targets. Second, the link cost Khadijah showed. "
             "(pause) Two pieces of related work we found while following up the consultation. CaMeL, from Google "

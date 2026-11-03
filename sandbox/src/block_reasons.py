@@ -8,6 +8,7 @@ names are kept only if they are real tools. Per config:
   rules          blocked calls per rule, split by benign / attack task
   false_blocks   benign episodes with >= 1 blocked call, per rule, with their task ids
                  (ours, not model text) for human review
+  false_block_tools  for those: blocked calls per rule, task id and tool name (real tools only)
   link_flows     links suite only: per flow, episodes, utility, blocked, blocked by the URL rule
   isolation      upper bound for leaks our scorer cannot see (e.g. a paraphrased secret):
                  episodes that read a secret email AND made an allowed send/reply/forward
@@ -67,6 +68,7 @@ def summarise(rows, suite):
     acc = defaultdict(lambda: {"rules": defaultdict(lambda: defaultdict(int)),
                                "rule_tools": defaultdict(lambda: defaultdict(int)),
                                "false_blocks": defaultdict(set), "fb_episodes": 0, "benign": 0,
+                               "fb_tools": defaultdict(lambda: defaultdict(lambda: defaultdict(int))),
                                "links": defaultdict(lambda: defaultdict(int)),
                                "iso": defaultdict(int)})
     for row in rows:
@@ -81,6 +83,8 @@ def summarise(rows, suite):
                 fired.add(rid)
                 a["rules"][rid][kind] += 1
                 a["rule_tools"][rid][c["tool"] if c["tool"] in TOOLS else "unknown_tool"] += 1
+                if kind == "benign":  # which tool a rule blocked in a normal task (for the authors' review)
+                    a["fb_tools"][rid][task["id"]][c["tool"] if c["tool"] in TOOLS else "unknown_tool"] += 1
         if kind == "benign":
             a["benign"] += 1
             a["fb_episodes"] += bool(fired)
@@ -112,6 +116,8 @@ def summarise(rows, suite):
             "rule_tools": {r: dict(v) for r, v in sorted(a["rule_tools"].items())},
             "benign_episodes": a["benign"], "benign_episodes_with_block": a["fb_episodes"],
             "false_blocks": {r: sorted(ids) for r, ids in sorted(a["false_blocks"].items())},
+            "false_block_tools": {r: {t: dict(v) for t, v in sorted(tasks.items())}
+                                  for r, tasks in sorted(a["fb_tools"].items())},
             "isolation": dict(a["iso"])}
         if a["links"]:
             out[cfg]["link_flows"] = {f: dict(v) for f, v in sorted(a["links"].items())}

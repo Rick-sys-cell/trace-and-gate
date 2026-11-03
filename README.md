@@ -1,7 +1,7 @@
 # Trace and Gate
 
 **Provenance tracking and policy checks against indirect prompt injection in email agents.**
-ESP3201A project, National University of Singapore, AY 2026/27 Sem 1. Rui Zhekai and Khadijah Fathima.
+ESP3201A project, National University of Singapore, AY 2026/27 Sem 1. Rui Zhekai and Khadijah Fathima (Group 11).
 
 An LLM email assistant reads mail written by strangers and can send, forward and delete mail for its
 user. Any incoming email can carry hidden instructions that take the agent over (*indirect prompt

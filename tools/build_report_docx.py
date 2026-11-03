@@ -1,6 +1,6 @@
 """Build an IEEE-style report .docx from Markdown, reusing the interim report's layout.
 
-    python tools/build_report_docx.py 3_Sources/Final_Report.md 4_Final_Submission/Final_Report.docx \
+    python tools/build_report_docx.py 3_Sources/Final_Report.md 4_Final_Submission/Group11_Trace_and_Gate_Report.docx \
         --kind "Final Report"
 
 The template (1_Interim_Submission/Interim_Report.docx, itself built from the proposal's layout)
@@ -277,7 +277,10 @@ def build(src: Path, out: Path, kind: str, venue: str, eq_config: str):
     meta, blocks = parse(src.read_text(encoding="utf-8"))
     tpl = Template(TEMPLATE)
     doc, body = tpl.doc, tpl.body
-    # title block and cover
+    # title block and cover; no tutor line on the final cover
+    for p in doc.paragraphs:
+        if p.text.strip().startswith("Tutor:"):
+            p._p.getparent().remove(p._p)
     for p in tpl.title_paras:
         set_runs(p, [meta["TITLE"]])
     for p in tpl.kind_paras:

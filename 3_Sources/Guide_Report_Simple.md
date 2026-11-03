@@ -2,12 +2,13 @@
 
 **Due: 12:00 PM Fri 6 Nov**, together with the slides and an email with the public GitHub link (course email, 3 Nov).
 
-A plain-language guide to `3_Sources/Final_Report.md` (built as `4_Final_Submission/Final_Report.docx`, 9 pages) for Rui and Khadijah. Every number comes from `sandbox/results/final_tables.md`; `python tools/check_numbers.py` checks the report against the result files. The terms (prompt injection, provenance, policy, attack success, utility, confidence interval, McNemar, held-out, AgentDojo, CAMEL-AI vs CaMeL, SETA) are explained in the glossary of `Guide_Presentation_Simple.md`.
+A plain-language guide to `3_Sources/Final_Report.md` (built as `4_Final_Submission/Group11_Trace_and_Gate_Report.docx`, 9 pages) for Rui and Khadijah. Every number comes from `sandbox/results/final_tables.md`; `python tools/check_numbers.py` checks the report against the result files. The terms (prompt injection, provenance, policy, attack success, utility, confidence interval, McNemar, held-out, AgentDojo, CAMEL-AI vs CaMeL, SETA) are explained in the glossary of `Guide_Presentation_Simple.md`.
 
 **Still to do before submission:**
-- **Khadijah, by Thu 5 Nov:** review the one normal task that D1h blocked, `benign-control-travel-send` (Section VII-G), and replace `[PENDING: the authors' review of this task]` with one sentence: was the block reasonable, or a false alarm?
-- **Then:**
-  - rebuild with `python tools/build_report_docx.py 3_Sources/Final_Report.md 4_Final_Submission/Final_Report.docx`;
+- **Khadijah, by Thu 5 Nov:** confirm the drafted review of the one normal task that D1h blocked, `benign-control-travel-send` (Section VII-G). Drafted 3 Nov from the data: in all 3 runs the blocked call was `reply`, while the user had asked to *email* a summary; D1h lost the task each time (B0 did it 1 of 3 times), while D1h+D2, which does not offer `reply` for this task, did it 3 of 3. Our verdict: correct by D1h's rule, but a real cost. Change the sentence if you judge it differently.
+- **Both:** type your matric numbers into the cover of `4_Final_Submission/Group11_Trace_and_Gate_Report.docx` (the Tutor line is removed), then export the PDF again.
+- **If anything in the Markdown changes:**
+  - rebuild with `python tools/build_report_docx.py 3_Sources/Final_Report.md 4_Final_Submission/Group11_Trace_and_Gate_Report.docx`;
   - run `python tools/check_numbers.py`. It should report 0 PENDING, and only the 2 published figures from other papers (47.7% and 39.9%) as unmatched.
 
 ---

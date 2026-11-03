@@ -16,7 +16,7 @@ What was checked: on 27 Oct 2026 a fresh clone from GitHub, set up by following 
 
 | When | Do |
 |---|---|
-| Tue 3 Nov | Done: deck final (0 PENDING), report updated, README ready for the AI reviewers. |
+| Tue 3 Nov | Done: deck final (0 PENDING), report updated (0 PENDING, no Tutor line), README ready for the AI reviewers; Group 11 on slides, email and file names (`Group11_Trace_and_Gate_*`). |
 | Thu 5 Nov | **Khadijah:** the one review sentence in the report (§VII-G, `benign-control-travel-send`); Claude rebuilds the report docx and PDF. |
 | Thu 5 Nov | Full rehearsal with both speakers, with the video, timed. If possible, open the deck on the class computer (or one like it) and check that the slide 6 video plays. Then the day-before checklist (section 3). |
 | **Fri 6 Nov, before 12:00 PM** | **Submit** (section 3a): slides and final report to the "Final Project Submission" folder, and email the public GitHub link. |
@@ -25,7 +25,8 @@ What was checked: on 27 Oct 2026 a fresh clone from GitHub, set up by following 
 
 ## 3a. Submission (by 12:00 PM Fri 6 Nov, before the presentations)
 
-- [ ] Upload to the "Final Project Submission" assignment folder: `4_Final_Submission/Final_Presentation.pptx` (or the PDF if the upload is too large) and `4_Final_Submission/Final_Report.pdf` (and `.docx` if they accept it).
+- [ ] Upload to the "Final Project Submission" assignment folder: `4_Final_Submission/Group11_Trace_and_Gate_Slides.pptx` (or `Group11_Trace_and_Gate_Slides.pdf` if the upload is too large) and `4_Final_Submission/Group11_Trace_and_Gate_Report.pdf` (and `.docx` if they accept it). Copies of all four are on the Desktop.
+- [ ] **Before uploading:** type both matric numbers into the cover table of `Group11_Trace_and_Gate_Report.docx` (left blank on purpose), then save it as PDF again (Word: File → Save As → PDF). If you rebuild the report from the Markdown, the matric numbers must be typed in again.
 - [ ] Send the email with the public GitHub link (https://github.com/Rick-sys-cell/trace-and-gate) to both staff; the text is ready in `2_Presentation_Prep/Email_GitHub_link.txt`.
 - [ ] Check the repository page once in a private browser window: public, README shows, latest commit pushed.
 - Not done, by choice: cloud deployment (the email says it "would be even better"; no time). If asked: the repository runs anywhere with Docker and Ollama, and `docs/DEMO_GUIDE.md` sets it up on a fresh laptop.
@@ -33,7 +34,7 @@ What was checked: on 27 Oct 2026 a fresh clone from GitHub, set up by following 
 ## 3. Day before (Thu 5 Nov)
 
 - [ ] Rebuild the deck if anything changed: `python tools/build_deck.py` (it embeds the video from `2_Presentation_Prep/`).
-- [ ] Copy `4_Final_Submission/Final_Presentation.pptx` (video inside), the PDF of the deck, the MP4 and `sandbox/results/figures/` to the desktop and to a USB stick.
+- [ ] Copy `4_Final_Submission/Group11_Trace_and_Gate_Slides.pptx` (video inside), the PDF of the deck, the MP4 and `sandbox/results/figures/` to the desktop and to a USB stick.
 - [ ] Open the deck from the USB stick on a second computer and play slide 6 once.
 - [ ] Laptop charged; Windows updates paused.
 
@@ -60,7 +61,7 @@ Click the video to play; click it again, or press space, to pause. Pause on the 
 
 ## 6. The video
 
-- **In the deck:** embedded in slide 6 of `4_Final_Submission/Final_Presentation.pptx` by `tools/build_deck.py`.
+- **In the deck:** embedded in slide 6 of `4_Final_Submission/Group11_Trace_and_Gate_Slides.pptx` by `tools/build_deck.py`.
 - **File:** `2_Presentation_Prep/Demo_Backup_live_2026-10-29.mp4` (21 MB, 63 s, 1920×1032), with a copy on the desktop as `Trace_and_Gate_demo_backup.mp4`. The original is in `Videos\Captures`.
 - Recorded with Windows Game Bar (`Win + Alt + R`) from one uncut live run. To re-record, follow `docs/DEMO_GUIDE.md`, save the new file under the same name in `2_Presentation_Prep/`, and rebuild the deck.
 

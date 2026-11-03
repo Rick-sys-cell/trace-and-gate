@@ -5,7 +5,7 @@
 Template: 1_Interim_Submission/Interim_Presentation_v3.pptx (theme, icons, cards, footer).
 Numbers: sandbox/results/final_tables.json (src/report_tables.py), diagnostics_*.json and
 block_reasons_*.json. A result that does not exist yet is shown as PENDING, never estimated.
-Writes 4_Final_Submission/Final_Presentation.pptx and 3_Sources/Final_Speaker_Notes.md.
+Writes 4_Final_Submission/Group11_Trace_and_Gate_Slides.pptx and 3_Sources/Final_Speaker_Notes.md.
 """
 from __future__ import annotations
 
@@ -29,10 +29,10 @@ ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / "1_Interim_Submission" / "Interim_Presentation_v3.pptx"
 RESULTS = ROOT / "sandbox" / "results"
 FIGS = RESULTS / "figures"
-OUT = ROOT / "4_Final_Submission" / "Final_Presentation.pptx"
+OUT = ROOT / "4_Final_Submission" / "Group11_Trace_and_Gate_Slides.pptx"
 NOTES_MD = ROOT / "3_Sources" / "Final_Speaker_Notes.md"
 DEMO_VIDEO = ROOT / "2_Presentation_Prep" / "Demo_Backup_live_2026-10-29.mp4"  # git-ignored; 1920x1032, 63 s
-FOOTER = "ESP3201A  ·  Final presentation  ·  Week 12, Fri 6 Nov 2026"
+FOOTER = "ESP3201A  ·  Group 11  ·  Final presentation  ·  Week 12, Fri 6 Nov 2026"
 # terminal screenshots of real command output, key lines boxed (tools/evidence_shots.py; git-ignored like the deck)
 EVIDENCE = ROOT / "2_Presentation_Prep" / "evidence"
 PENDING = "PENDING"
@@ -265,7 +265,7 @@ def repo_line(s, top, left=0.42, size=12, right=False):
 
 
 def s_title(s, D):
-    set_text(by_text(s, "ESP3201A  ·  INTERIM"), "ESP3201A  ·  FINAL PRESENTATION")
+    set_text(by_text(s, "ESP3201A  ·  INTERIM"), "ESP3201A  ·  GROUP 11  ·  FINAL PRESENTATION")
     # soft glow top right, behind everything
     for left, top, size, rgb, alpha in ((6.6, -1.6, 4.6, "3B82F6", 18), (7.9, 0.6, 3.0, "22D3EE", 12)):
         _to_back(_shape(s, MSO_SHAPE.OVAL, left, top, size, size, rgb, alpha))

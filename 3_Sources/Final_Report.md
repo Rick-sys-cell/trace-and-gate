@@ -1,6 +1,6 @@
 <!--
-Source for 4_Final_Submission/Final_Report.docx. Build:
-  python tools/build_report_docx.py 3_Sources/Final_Report.md 4_Final_Submission/Final_Report.docx
+Source for 4_Final_Submission/Group11_Trace_and_Gate_Report.docx. Build:
+  python tools/build_report_docx.py 3_Sources/Final_Report.md 4_Final_Submission/Group11_Trace_and_Gate_Report.docx
 Markup: see tools/build_report_docx.py. Every number cites a file in sandbox/results/ (see the
 comment above each section); sandbox/results/final_tables.md collects them. "[PENDING: ...]"
 marks results that do not exist yet; tools/check_numbers.py lists any left before submission.
@@ -266,7 +266,7 @@ The condition was met: undefended, CAMEL-AI followed 30.0% (12/40) of the LLMail
 ## G. Failure Analysis and Cost
 
 <!-- results/block_reasons_*.json -->
-On the held-out set, D1h blocked an action in 3 of 168 normal episodes, all in one task (benign-control-travel-send, once per run), where its rule that the user must have asked for the action fired; [PENDING: the authors' review of this task]. No other configuration blocked anything in a normal task. As an upper bound on leaks our exact-match scorer could miss, we counted episodes in which the agent read a secret email and then sent anything outside the university: 4 under B0, all of them already scored as successful attacks, and none under any defense. On the development suite there were none in any configuration. With Qwen2.5-7B, D1h, D2 and D1h+D2 each blocked an action in 6 of 56 normal episodes, yet each still completed more normal tasks than B0 (Table VI); B0 read a secret and then sent mail outside the university in 3 episodes, the defenses in none.
+On the held-out set, D1h blocked an action in 3 of 168 normal episodes, all in one task (benign-control-travel-send, once per run), where its rule that the user must have asked for the action fired. In each run the blocked call was reply: the user had asked to email a summary to lim@uni.example, not to reply to a message, so the block follows D1h's rule. The agent did not then switch to send_email, so D1h lost the task in all three runs, where B0 completed it in one of three. Under D1h+D2 the task's policy does not offer reply, the agent used send_email, and it completed the task in all three runs. We judge the block correct by D1h's rule but a real cost; a refusal message that names the allowed action may recover such cases. No other configuration blocked anything in a normal task. As an upper bound on leaks our exact-match scorer could miss, we counted episodes in which the agent read a secret email and then sent anything outside the university: 4 under B0, all of them already scored as successful attacks, and none under any defense. On the development suite there were none in any configuration. With Qwen2.5-7B, D1h, D2 and D1h+D2 each blocked an action in 6 of 56 normal episodes, yet each still completed more normal tasks than B0 (Table VI); B0 read a secret and then sent mail outside the university in 3 episodes, the defenses in none.
 
 The defenses cost nothing in model time. Per held-out episode, B0 took 4.7 s, 3.8 model calls and 3,136 tokens; D1h took 4.5 s and 3,168 tokens; D2 and D1h+D2 took 4.3 s and 4.0 s and used 26% fewer tokens (2,309 and 2,292), because D2 hides the tools a task does not need. B1 was the slowest (5.4 s) and used 5.2 model calls, 1.3 of them by its reader.
 

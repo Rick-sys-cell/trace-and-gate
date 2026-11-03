@@ -206,6 +206,23 @@ def demo_poster():
 # Slides. Each function edits one slide (a copy of an interim slide) and returns its speaker notes.
 
 
+REPO = "github.com/Rick-sys-cell/trace-and-gate"
+
+
+def repo_line(s, top, left=0.42, size=12, right=False):
+    """The public repository link (course email, 3 Nov: the GitHub link is part of the submission)."""
+    tb = s.shapes.add_textbox(Inches(left), Inches(top), Inches(6.0), Inches(0.3))
+    para = tb.text_frame.paragraphs[0]
+    if right:
+        from pptx.enum.text import PP_ALIGN
+        para.alignment = PP_ALIGN.RIGHT
+    r = para.add_run()
+    r.text = "Code, data and results: " + REPO
+    r.font.size = Pt(size)
+    r.font.color.rgb = RGBColor.from_string("64748B")
+    return tb
+
+
 def s_title(s, D):
     set_text(by_text(s, "ESP3201A  ·  INTERIM"), "ESP3201A  ·  FINAL PRESENTATION")
     # soft glow top right, behind everything
@@ -230,6 +247,7 @@ def s_title(s, D):
                 r.font.bold = True
     for left in (2.95, 5.95):
         _shape(s, MSO_SHAPE.CHEVRON, left, 3.45, 0.22, 0.3, "64748B")
+    repo_line(s, 4.85)
     return ("Hi, I'm Rui, and this is Khadijah. Our project is Trace and Gate. (pause) The problem: an AI email "
             "assistant can be tricked by instructions hidden inside an email. That trick is called prompt injection. "
             "(pause) Since the interim we froze our defenses, then tested them on attacks they had never seen, on a "
@@ -832,10 +850,11 @@ def s_takeaways(s, D):
         set_text(by_text(s, old_b), c[3])
     for old_w, c in (("Weak spot: data", cards[0]), ("Weak spot: can be", cards[1]), ("Weak spot: can’t", cards[2])):
         set_text(by_text(s, old_w), c[4])
+    repo_line(s, 0.62, left=3.5, size=11, right=True)
     return ("Three takeaways. (pause) One: decide outside the model. Checking each action in code stopped every "
             "attack we ran, with no extra model calls. Two: the two checks do different jobs. D2 removes what the "
             "task doesn't need; D1h catches attacker content riding inside an action the user asked for. Three: "
-            "measure harmless work too. Our first benchmark could not see that D1h blocks copied links. Thank you.\n\n"
+            "measure harmless work too. Our first benchmark could not see that D1h blocks copied links. Everything, code, results and how to run it, is in our public GitHub repository, linked at the top. Thank you.\n\n"
             "Key line: Trace the data, gate the action, and measure what it costs.")
 
 

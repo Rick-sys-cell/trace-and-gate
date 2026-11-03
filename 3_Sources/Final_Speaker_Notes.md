@@ -94,7 +94,7 @@ Key line: Strong on fixed attacks; adaptive attackers are the open question.
 
 ## 16. Takeaways
 
-Three takeaways. (pause) One: decide outside the model. Checking each action in code stopped every attack we ran, with no extra model calls. Two: the two checks do different jobs. D2 removes what the task doesn't need; D1h catches attacker content riding inside an action the user asked for. Three: measure harmless work too. Our first benchmark could not see that D1h blocks copied links. Thank you.
+Three takeaways. (pause) One: decide outside the model. Checking each action in code stopped every attack we ran, with no extra model calls. Two: the two checks do different jobs. D2 removes what the task doesn't need; D1h catches attacker content riding inside an action the user asked for. Three: measure harmless work too. Our first benchmark could not see that D1h blocks copied links. Everything, code, results and how to run it, is in our public GitHub repository, linked at the top. Thank you.
 
 Key line: Trace the data, gate the action, and measure what it costs.
 

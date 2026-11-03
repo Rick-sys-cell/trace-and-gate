@@ -1,9 +1,11 @@
 # Trace and Gate: the final report in simple terms
 
+**Due: 12:00 PM Fri 6 Nov**, together with the slides and an email with the public GitHub link (course email, 3 Nov).
+
 A plain-language guide to `3_Sources/Final_Report.md` (built as `4_Final_Submission/Final_Report.docx`, 9 pages) for Rui and Khadijah. Every number comes from `sandbox/results/final_tables.md`; `python tools/check_numbers.py` checks the report against the result files. The terms (prompt injection, provenance, policy, attack success, utility, confidence interval, McNemar, held-out, AgentDojo, CAMEL-AI vs CaMeL, SETA) are explained in the glossary of `Guide_Presentation_Simple.md`.
 
 **Still to do before submission:**
-- **Khadijah:** review the one normal task that D1h blocked, `benign-control-travel-send` (Section VII-G), and replace `[PENDING: the authors' review of this task]` with one sentence: was the block reasonable, or a false alarm?
+- **Khadijah, by Thu 5 Nov:** review the one normal task that D1h blocked, `benign-control-travel-send` (Section VII-G), and replace `[PENDING: the authors' review of this task]` with one sentence: was the block reasonable, or a false alarm?
 - **Then:**
   - rebuild with `python tools/build_report_docx.py 3_Sources/Final_Report.md 4_Final_Submission/Final_Report.docx`;
   - run `python tools/check_numbers.py`. It should report 0 PENDING, and only the 2 published figures from other papers (47.7% and 39.9%) as unmatched.

@@ -15,6 +15,23 @@ injection*). We compare two system-level defenses against a no-defense baseline 
 | **D2** | Policy checks: per-task tool allowlist, recipient origin, object scope, secrets stay internal |
 | **D1h+D2** | Both: an action must pass both checks |
 
+## For reviewers (start here)
+
+- **What it is:** a sandboxed LLM email agent (local Qwen3-8B via Ollama, inside Docker) and a *gate* of two
+  deterministic checks that every tool call must pass: **D1h** provenance tracking and **D2** per-task policies.
+  We measure how often injected emails hijack the agent, and how many normal tasks still succeed.
+- **Fastest checks** (from `sandbox/`):
+  1. `python benchmark/build_suite.py --version 3 && python -m unittest discover -s tests`: offline, needs
+     only Python 3.10+; no Docker, no model. A fresh clone gives `OK` (83 tests, the rest skipped).
+  2. `docker compose run --rm agent python src/demo.py --oracle`: one poisoned email through B0, D2, D1h and
+     D1h+D2 with a scripted agent that always obeys the attack; prints each tool call and the gate's decision.
+  3. `docker compose run --rm agent python src/isolation_check.py`: the container checks its own isolation (16/16).
+- **Main code:** `sandbox/src/defenses.py` (B1, D1h, D2, D1h+D2; frozen at tag `defenses-frozen-v1`),
+  `agent.py` (agent loop and system prompt), `email_env.py` (simulated mailbox and tools),
+  `camel_agent.py` (CAMEL-AI agent behind the same gate), `agentdojo_bridge.py` (the gate inside AgentDojo).
+- **Results:** every number is in [`sandbox/results/final_tables.md`](sandbox/results/final_tables.md); the
+  report source is [`3_Sources/Final_Report.md`](3_Sources/Final_Report.md).
+
 ## Results (Qwen3-8B, local)
 
 Held-out attacks, written after the defenses were frozen (git tag `defenses-frozen-v1`): run `20261025-034455`,
@@ -77,6 +94,75 @@ over 7 GB, the guard sets a flag; between episodes the AgentDojo runner unloads 
 
 - [`docs/DEMO_GUIDE.md`](docs/DEMO_GUIDE.md): step-by-step setup and a 5-minute demo script for a fresh laptop.
 - [`docs/HELDOUT_AUTHORING.md`](docs/HELDOUT_AUTHORING.md): how the held-out attacks are written (by the team, never by the AI assistant).
+
+## Repository map
+
+| Path | What is there |
+|---|---|
+| `sandbox/src/` | Agent, defenses, mailbox, runners (`run_eval.py`, `run_agentdojo.py`), analysis (`analyse.py`, `block_reasons.py`, `attack_diagnostics.py`, `agentdojo_analyse.py`, `report_tables.py`), `demo.py`, `isolation_check.py` |
+| `sandbox/benchmark/` | `build_suite.py` (dev v3, held-out and links suites), `import_llmail.py`; `tasks/` holds task files with `{{payload:ID}}` placeholders only |
+| `sandbox/tests/` | Offline unit tests: oracle replays of every scripted hijack against each defense, frozen-source test, CAMEL-AI gate parity, AgentDojo bridge |
+| `sandbox/results/` | Numbers-only summaries (`summary_*.json`), analyses (`analysis_*.json`, `block_reasons_*.json`, `diagnostics_*.json`), figures, `final_tables.md` |
+| `sandbox/gateway/`, `Dockerfile`, `docker-compose.yml` | The nginx gateway (inference endpoints only) and the locked-down agent container |
+| `tools/` | Memory guard for long runs, deck and report builders, `check_numbers.py` (checks every number in the report against the result files), `evidence_shots.py` |
+| `docs/` | `DEMO_GUIDE.md` (setup and demo on a fresh laptop), `HELDOUT_AUTHORING.md` |
+| `3_Sources/` | Report source (`Final_Report.md`), speaker notes, plain-language guides, AI declaration |
+| `PROJECT_TIMELINE.md` | Tracker and decisions log, including every rule fixed before a run |
+
+## Reproduce the results
+
+All runs are inside the container (from `sandbox/`, after `docker compose build`), with Ollama serving the model
+on the host. Each run writes `results/summary.json` plus a labelled copy `results/summary_<label>_<run_id>.json`;
+full transcripts go to `results/raw/` (git-ignored, they contain attack text).
+
+```bash
+# 1. Benchmarks (host)
+python benchmark/build_suite.py --version 3                     # dev suite v3: template attacks
+python benchmark/import_llmail.py --n 40 --seed 3201            # dev LLMail attacks (needs internet)
+python benchmark/import_llmail.py --seed 4202 --out llmail_heldout.json --exclude llmail.json   # held-out LLMail
+python benchmark/build_suite.py --heldout                       # held-out suite (see "Not in the repository")
+python benchmark/build_suite.py --links                         # 40 benign tasks with links
+
+# 2. Runs (container): docker compose run --rm agent python src/run_eval.py <arguments below>
+--tasks benchmark/tasks/email_suite_v3.json --configs b0 b1 d1h d2 d1hd2 --runs 1 --label dev_v3
+--tasks benchmark/tasks/heldout_suite.json  --configs b0 b1 d1h d2 d1hd2 --runs 3 --label heldout
+--tasks benchmark/tasks/heldout_suite.json  --configs b0 b1 d1h d2 d1hd2 --runs 1 --label heldout_qwen25   # with MODEL=qwen2.5:7b
+--tasks benchmark/tasks/links_suite.json    --configs b0 b1 d1h d2 d1hd2 d1hl d1hld2 --runs 3 --label links
+--tasks benchmark/tasks/heldout_suite.json  --configs b0 d2 d1h d1hd2 --runs 1 --label heldout_camel --agent camel
+# AgentDojo workspace: docker compose run --rm agent python src/run_agentdojo.py --configs b0 b1 d1hd2 --pairs-per-task 4 --seed 3201
+#   B0 trials: --configs b0 --user-tasks 24 --pairs-per-task 1 --seed 3202 --attacks-only, with --model and --attack
+
+# 3. Analysis (host)
+python src/analyse.py --summary results/summary_heldout_<run_id>.json --tag heldout
+python src/block_reasons.py --run <run_id> --suite heldout_suite.json --tag heldout
+python src/attack_diagnostics.py --run <run_id> --suite heldout_suite.json --tag heldout
+python src/agentdojo_analyse.py
+python src/report_tables.py                                      # -> results/final_tables.md
+```
+
+`MODEL` is read by `docker-compose.yml` (default `qwen3:8b`); the model settings (temperature 0.3, 16k context,
+thinking off) are the same for every run. Rough run times on our desktop (16 GB RAM, AMD RX 6750 GRE): dev v3
+about 1 hour; held-out, 3 runs, about 2.5 hours; CAMEL-AI held-out about 35 minutes; the AgentDojo full run overnight.
+
+| Report table | Result file | Run |
+|---|---|---|
+| IV Development v3 | `analysis_dev_v3.json` | `20261024-135826` |
+| V Held-out, 3 runs | `analysis_heldout.json` | `20261025-034455` |
+| VI Qwen2.5-7B | `analysis_heldout_qwen25.json` | `20261025-071911` |
+| VII Benign links | `block_reasons_links.json`, `analysis_links.json` | `20261025-055650` |
+| VIII AgentDojo | `analysis_agentdojo.json` | `agentdojo_20261025-075616` |
+| IX–X AgentDojo B0 trials | `analysis_agentdojo_spike.json`, `analysis_agentdojo_spike_models.json` | `agentdojo_20261026-*`, `agentdojo_20261102-*` |
+| XI CAMEL-AI | `analysis_heldout_camel.json` | `20261102-151939` |
+
+## Not in the repository, and why
+
+- **Attack text** (`sandbox/benchmark/payloads/`, `sandbox/benchmark/custom_attacks/`) and **full transcripts**
+  (`sandbox/results/raw/`): never committed, so the repository cannot itself inject an AI agent that reads it.
+  The template and LLMail payloads are regenerated by the commands above.
+- **The 18 team-written held-out attacks** are not published, so the held-out run cannot be repeated exactly; the
+  40 held-out LLMail attacks can be re-imported, and per-episode results for all 58 are in the committed summary.
+- **The AgentDojo `test_framing` template** (written after the freeze) is likewise not published.
+- **Slides and the report document** are submitted to the course; the report's source text is in `3_Sources/`.
 
 ## AI use
 

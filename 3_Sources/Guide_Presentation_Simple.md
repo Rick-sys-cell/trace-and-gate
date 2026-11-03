@@ -1,6 +1,6 @@
 # Trace and Gate: the presentation in simple terms
 
-A plain-language guide for Rui and Khadijah, for the final presentation on **Friday 6 November 2026 (Week 12)**. Every number here comes from `sandbox/results/final_tables.md`. If the two ever disagree, `final_tables.md` is right.
+A plain-language guide for Rui and Khadijah, for the final presentation on **Friday 6 November 2026 (Week 12)**: a **20-minute slot** (aim for about 15 minutes of talk), in group order from 1:00 PM. Slides, report and the GitHub link are due **12:00 PM that day**. Every number here comes from `sandbox/results/final_tables.md`. If the two ever disagree, `final_tables.md` is right.
 
 **Speakers:** Rui gives slides 1–7 and 15–16. Khadijah gives slides 8–14. Slides 17–26 are backup slides, shown only if someone asks.
 

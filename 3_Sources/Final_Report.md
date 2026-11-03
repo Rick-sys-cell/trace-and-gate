@@ -26,6 +26,8 @@ This report makes four contributions:
 - *Cost.* A failure analysis of every action the defenses blocked, and a separate test of harmless links, a cost the main benchmark missed.
 - *Scope.* An explicit account of the threats that neither our benchmark nor AgentDojo covers.
 
+The code, task files and all result files are public at https://github.com/Rick-sys-cell/trace-and-gate; attack text and transcripts are withheld.
+
 # II. Changes Since the Interim Report
 
 The interim pilot showed that the combined defense lost 12.5 points of normal-task success, mostly because D1 blocked harmless summaries that quoted sender addresses, and that a variant (D1h) fixed this. Table I lists what we changed in response.

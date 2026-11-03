@@ -4,7 +4,7 @@ Trace and Gate · ESP3201A · Week 12, Fri 6 Nov 2026 · for Rui (demo) and Khad
 
 ## 1. At a glance
 
-- **Who:** Rui presents slides 1–7 (the demo video is slide 6) and 15–16; Khadijah presents slides 8–14. About one minute per main slide plus about one and a half minutes for the demo: about 17 minutes, then questions. The plain-language guide (`3_Sources/Guide_Presentation_Simple.md`) explains every slide and term. Check this against our time slot and cut backup detail first if it is shorter.
+- **Who:** Rui presents slides 1–7 (the demo video is slide 6) and 15–16; Khadijah presents slides 8–14. **Our slot is 20 minutes** (course email, 3 Nov; groups go in order from 1:00 PM, Group 1 at 1:00, Group 2 at 1:20, …). Aim for **about 15 minutes of talk**, so questions fit: about 50 seconds per main slide plus the 63-second video. If the rehearsal runs long, shorten slides 8, 13 and 14 first (say only the key line), never the demo (6–7) or the limits (15). The plain-language guide (`3_Sources/Guide_Presentation_Simple.md`) explains every slide and term.
 - **What the demo shows:** one poisoned email, four agents. With no defense the agent is hijacked; D2, D1h and D1h+D2 each stop it; Alex's own task is still done in all four.
 - **How:** slide 6 plays a recording (63 seconds) of a real live run, made on 29 Oct 2026 on the project desktop: the real model (Qwen3-8B) inside the sandbox, running `docker compose run --rm agent python src/demo.py --live --show-email`. Decided 29 Oct: no live run in class, so nothing depends on Docker, Ollama or memory on the day.
 - **If the video will not play:** open the MP4 from the desktop or the USB stick (section 6); slide 7 shows the same demo as an annotated screenshot anyway, and backup slide 24 shows it as a table.
@@ -16,10 +16,19 @@ What was checked: on 27 Oct 2026 a fresh clone from GitHub, set up by following 
 
 | When | Do |
 |---|---|
-| Wed 4 Nov night | Final deck, speaker notes and guide ready (slide 11's AgentDojo table and slide 12's CAMEL-AI numbers filled in if the runs finished). |
+| Tue 3 Nov | Done: deck final (0 PENDING), report updated, README ready for the AI reviewers. |
+| Thu 5 Nov | **Khadijah:** the one review sentence in the report (§VII-G, `benign-control-travel-send`); Claude rebuilds the report docx and PDF. |
 | Thu 5 Nov | Full rehearsal with both speakers, with the video, timed. If possible, open the deck on the class computer (or one like it) and check that the slide 6 video plays. Then the day-before checklist (section 3). |
-| Fri 6 Nov, 15 min before | Start-up checklist (section 4). |
+| **Fri 6 Nov, before 12:00 PM** | **Submit** (section 3a): slides and final report to the "Final Project Submission" folder, and email the public GitHub link. |
+| Fri 6 Nov, 15 min before our slot | Start-up checklist (section 4). |
 | Slide 6 | Play the demo video (section 5). |
+
+## 3a. Submission (by 12:00 PM Fri 6 Nov, before the presentations)
+
+- [ ] Upload to the "Final Project Submission" assignment folder: `4_Final_Submission/Final_Presentation.pptx` (or the PDF if the upload is too large) and `4_Final_Submission/Final_Report.pdf` (and `.docx` if they accept it).
+- [ ] Send the email with the public GitHub link (https://github.com/Rick-sys-cell/trace-and-gate) to both staff; the text is ready in `2_Presentation_Prep/Email_GitHub_link.txt`.
+- [ ] Check the repository page once in a private browser window: public, README shows, latest commit pushed.
+- Not done, by choice: cloud deployment (the email says it "would be even better"; no time). If asked: the repository runs anywhere with Docker and Ollama, and `docs/DEMO_GUIDE.md` sets it up on a fresh laptop.
 
 ## 3. Day before (Thu 5 Nov)
 

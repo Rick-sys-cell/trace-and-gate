@@ -24,8 +24,8 @@ FIGS = RESULTS / "figures"
 INK, INK2, GRID, AXIS, SURF = "#0b0b0b", "#52514e", "#e1e0d9", "#c3c2b7", "#ffffff"
 ATTACK, NORMAL = "#2a78d6", "#eb6834"   # analyse.py slots 1-2
 GUARDED = INK2                          # "with the gate" bars on the generalisation chart (direct-labelled)
-NAME = {"b0": "B0\nno defense", "b1": "B1\nDual-LLM", "d1h": "D1h\nprovenance", "d2": "D2\npolicy",
-        "d1hd2": "D1h+D2\nboth", "d1hl": "D1h-L\ntrusts contacts"}
+NAME = {"b0": "No\ndefense", "b1": "Second-AI\nreader", "d1h": "Source\ncheck", "d2": "Tool\nallowlist",
+        "d1hd2": "Both\nchecks", "d1hl": "Source check,\ncontacts' links"}  # plain names only (Rui, 4 Nov)
 
 
 def _style(fs=13):
@@ -90,7 +90,7 @@ def generalise(t, out):
         h = z * sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den
         return {"k": k, "n": n, "ci95": [max(0, mid - h), min(1, mid + h)]}
 
-    groups = [("Qwen3-8B\nour held-out set", t["heldout"]["configs"]["b0"]["asr"], t["heldout"]["configs"]["d1hd2"]["asr"]),
+    groups = [("Qwen3-8B\nour new attacks", t["heldout"]["configs"]["b0"]["asr"], t["heldout"]["configs"]["d1hd2"]["asr"]),
               ("Qwen2.5-7B\nsecond model", t["qwen25"]["configs"]["b0"]["asr"], t["qwen25"]["configs"]["d1hd2"]["asr"]),
               ("AgentDojo\npublic benchmark", ad_rate("b0"), ad_rate("d1hd2"))]
     _style()
@@ -102,7 +102,7 @@ def generalise(t, out):
     ax.set_xticks(range(len(groups)), [g[0] for g in groups], fontsize=11)
     _axes(ax, top=50)
     ax.set_ylabel("% of attacks that worked")
-    _legend(fig, [(ATTACK, "B0 · no defense"), (GUARDED, "D1h+D2 · both checks")])
+    _legend(fig, [(ATTACK, "No defense"), (GUARDED, "Both checks")])
     fig.savefig(out, facecolor=SURF)
     plt.close(fig)
 

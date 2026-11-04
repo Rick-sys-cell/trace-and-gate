@@ -15,6 +15,8 @@ injection*). We compare two system-level defenses against a no-defense baseline 
 | **D2** | Policy checks: per-task tool allowlist, recipient origin, object scope, secrets stay internal |
 | **D1h+D2** | Both: an action must pass both checks |
 
+The report and slides use plain names for these: **no defense** (B0), **second-AI reader** (B1), **source check** (D1h), **tool allowlist** (D2), **both checks** (D1h+D2), **contact-link variant** (D1h-L), and **new attacks** for the held-out set. The codes are used in the code and the result files.
+
 ## For reviewers (start here)
 
 - **What it is:** a sandboxed LLM email agent (local Qwen3-8B via Ollama, inside Docker) and a *gate* of two

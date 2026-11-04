@@ -341,6 +341,7 @@ if __name__ == "__main__":
     ap.add_argument("out", type=Path)
     ap.add_argument("--kind", default="Final Report", help="cover-page line, e.g. 'Final Report'")
     ap.add_argument("--venue", default="ESP3201A Final Report, National University of Singapore")
-    ap.add_argument("--eq-config", default="D1h+D2", help="configuration named in equations (1) and (2)")
+    ap.add_argument("--eq-config", default="both", help="configuration named in equations (1) and (2) "
+                    "(plain name since 4 Nov: 'both' checks, against 'none')")
     a = ap.parse_args()
     build(a.src, a.out, a.kind, a.venue, a.eq_config)

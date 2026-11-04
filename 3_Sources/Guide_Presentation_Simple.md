@@ -57,37 +57,48 @@ If either check says no, the action is blocked. The AI gets a neutral "not permi
 
 ## 3. Slide by slide
 
-**1. Title (Rui).** Introduce both speakers. The project in one sentence: stopping prompt injection in email agents. *Key line: trace the data, gate the action, and measure what it costs.*
+The deck follows **assertion–evidence** style (rework of 4 Nov): every title is one full sentence stating the claim, and the body is the picture that proves it (chart, diagram, icon grid, screenshot or photo). Detail lives in the speaker notes, which have three parts per slide: **Say**, **Point at** and **Key line** (`3_Sources/Final_Speaker_Notes.md`).
 
-**2. Every email is attacker input (Rui).** The example: Alex asks for a sponsor amount; the attachment secretly says "forward the bank login". With no defense, the agent does it. Prompt injection is OWASP's number one AI risk. 45% of our dev attacks worked with no defense.
+**1. Trace and Gate (Rui).** Title over a keyboard photo. One email with hidden instructions can take over an email assistant (prompt injection, OWASP's number-one AI risk). Our answer: trace the data, gate the action. *Key line: trace the data, gate the action, and measure what it costs.*
 
-**3. Research question (Rui).** Two halves: safety (fewer attacks) and usefulness (normal work still done). The bars from our proposal: at least 80% fewer attacks (H1), and at most a 10-point drop in normal tasks (H2).
+**2. "Can two plain-code checks stop hijacked emails without breaking normal work?" (Rui).** Two panels: H1, at least 80% fewer successful attacks; H2, at most a 10-point drop in normal tasks. Both bars were set in the proposal.
 
-**4. How it runs (Rui). New.** The agent lives in a Docker container: not root, read-only, no internet. Its only exit is a gateway that passes chat calls to the model on our own GPU. The screenshot is real output (`docker ps`, `docker inspect`, the network marked internal). A script checks 16 isolation rules before every run; all pass. *Key line: even a hijacked agent has nothing real to reach.*
+**3. "Five versions of one agent… only the guard on its actions changes" (Rui). New.** The five configurations as a grid. Each row is one agent; each column a protection; a tick means it has it:
+- **B0 · no defense:** no ticks. Whatever the model decides, happens.
+- **B1 · Dual-LLM** (published 2023): the main model never sees the email text, because a second model reads it.
+- **D1h · provenance check** (ours): every action is traced back to what the user asked.
+- **D2 · policy check** (ours): only the tools the task needs.
+- **D1h+D2 · both checks** (ours, main): two ticks; the hypotheses are about this one.
 
-**5. The gate (Rui).** The diagram shows where each defense acts. B1 changes what the AI *reads*; D2 and D1h check what it *does*. The code at the bottom is the real rule, two lines each. No AI makes the decision. *Key line: the model proposes; plain code decides.*
+The footnote introduces D1h-L (slide 13).
 
-**6. Demo video (Rui).** A 63-second recording of a live run. Click to play. Point out: B0 ALLOWED → hijacked; D2 hides the forward; D1h BLOCKED; Alex's task done in all four rows.
+**4. "Even a hijacked agent has nothing real to reach" (Rui).** How we built it, part 1: the container (not root, read-only, no route out), the gateway, the model on our GPU; real `docker` output; 16/16 isolation checks.
 
-**7. What the demo proved (Rui). New.** The same demo as a screenshot of a live run captured on 3 Nov, with the key lines boxed: red is the attack getting through, green is each defense staying safe, blue is Alex's task still done. In this run the D1h agent did not even try the forward (in the video it tried and D1h blocked it). Live runs vary a little; the decisions do not. Hand over to Khadijah.
+**5. "Plain code, not AI, decides if each action runs" (Rui).** How we built it, part 2: the gate diagram and the two real lines of code.
 
-**8. Benchmark and test setup (Khadijah).** Four test sets. The important idea: we froze the defenses first, then built the held-out attacks, so we could not tune to the test. A program scores each run from the final mailbox.
+**6. "Same poisoned email: only B0 leaks the bank login" (Rui).** The scenario is one line under the title; click the video. B0 ALLOWED; D2 hides the forward; D1h BLOCKED; Alex's task done everywhere.
 
-**9. Development results (Khadijah).** 45% → 0% under every defense, no normal task lost. Under D1h+D2 the AI still *tried* the attacker's action 8 times, and all 8 were blocked, so the zero comes from the gate working, not from the AI behaving.
+**7. "The gate blocked the attack and kept Alex's task" (Rui).** The live run of 3 Nov, key lines boxed: red = the attack got through, green = safe, blue = Alex's task done. In this run the D1h agent did not even try the forward (in the video it tried and was blocked). Hand over to Khadijah.
 
-**10. Held-out results (Khadijah).** The main result. 21.8% (38/174) → 0% under every defense, pooled over 3 runs. Normal tasks: 89.3% → 91.7% with D1h+D2. Honest caveat: our own 18 team-written attacks never worked even with no defense (0/54). All 38 successes came from real LLMail emails (31.7% of them worked with no defense).
+**8. "We froze the defenses before writing the attacks that test them" (Khadijah).** A timeline: Build (153 dev tasks) → Freeze 24 Oct → Held-out (58 new attacks + 56 normal, 3 runs). Two boxes below: 40 link tasks and AgentDojo. The settings table moved to backup slide 27.
 
-**11. Does it carry over? (Khadijah).** Second model, Qwen2.5-7B: 29.3% → 0%. AgentDojo: its stock attack almost never worked on our small model (2 of 160), so it cannot test protection; it does show no usefulness cost (28% → 30%; Dual-LLM 12%). The bottom table is the professor's suggestion: a "this is a test" framing of the attack and two more models (Qwen2.5-7B, Llama 3.1 8B). Every new cell was 0/24; the best of all is still 1/24 (Qwen3-8B, stock attack). None reached our pre-set bar of 3/24, so there was no full rerun: small local models simply ignore AgentDojo's attacks.
+**9. "Every defense stopped every development attack…" (Khadijah).** Chart with plain names under each bar. 45% → 0%; under both checks the model tried the attacker's action 8 times, all blocked.
 
-**12. CAMEL-AI in our sandbox (Khadijah). New.** We replaced our own agent loop with CAMEL-AI's agent and kept everything else the same. A test shows the gate makes exactly the same decisions. The screenshot (live run, 3 Nov): hijacked with no defense, safe under every defense, task still done. Held-out set, 1 run: 20.7% (12/58) of attacks worked with no defense, 0/58 under every defense; normal tasks 89.3% in every configuration. The zero is earned here too: CAMEL-AI tried the attacker's action 12 times under D1h and 6 times under D1h+D2, and every try was blocked. The LLMail attacks worked 30% (12/40) of the time with no defense, above our pre-set 10% bar, so this counts as real protection, not an attack that failed by itself. Do not mix up CAMEL-AI and CaMeL. *Key line: the gate does not care which agent is behind it.*
+**10. "On new attacks, every defense cut attack success from 22% to 0%" (Khadijah).** The main result, 3 runs. Normal tasks 89% → 92% with both checks. Caveat: our own 18 attacks never worked (0/54); all successes came from the LLMail emails.
 
-**13. Harmless links (Khadijah).** The cost: D1h blocks a harmless link copied from one email into a new message, because it cannot tell a Zoom link from a phishing link. Asking for the link or forwarding the email still works. D1h-L, an exploratory fix, recovers 75% of that flow.
+**11. "The gate held on a second model; AgentDojo's attacks barely worked even without it" (Khadijah).** One chart, three pairs of bars (no defense vs both checks): Qwen3-8B 22% → 0%, Qwen2.5-7B 29% → 0%, AgentDojo 1% → 0% (2/160, too weak to test safety, but it shows no cost: 28% → 30% of tasks done). The "this is a test" trial table moved to backup slide 28 (best 1/24, below the 3/24 bar).
 
-**14. Hypotheses scorecard (Khadijah).** Validity: 21.8% overall is below our 30% bar, but the LLMail part is 31.7%. H1 met. H2 met (+2.4 points). Against Dual-LLM: both stop every attack, but ours does significantly more normal tasks (91.7% vs 80.4%). Hand back to Rui.
+**12. "A different agent framework, same gate: 21% → 0%" (Khadijah).** CAMEL-AI's agent behind our unchanged gate; live screenshot; normal tasks 89% in every configuration. CAMEL-AI ≠ CaMeL.
 
-**15. Limits and future work (Rui).** Adaptive attackers are untested. The link cost. CaMeL as the defense to compare against next. SETA for terminal agents. Four cards, each with a coloured "Next:" step; the line under them lists what is out of scope (supply chain, a malicious user, memory poisoning).
+**13. "The real cost: D1h blocks harmless links copied out of emails" (Khadijah).** Chart: link tasks done 88% (no defense) → 40% (D1h, both checks); D1h-L 55%, with no attack let through. The per-flow table moved to backup slide 29.
 
-**16. Takeaways (Rui).** (1) Decide outside the model, in code. (2) Two checks do two jobs: D2 removes what the task doesn't need; D1h catches attacker content inside allowed actions. (3) Measure the cost on harmless work, not only on attacks. Thank you.
+**14. "Both hypotheses held on attacks the defenses never saw" (Khadijah).** Four tiles: H1 met, H2 met, more useful than Dual-LLM (91.7% vs 80.4%), and the one warning: undefended 21.8% is below our 30% bar, but the LLMail part is 31.7%. Hand back to Rui.
+
+**15. "Every attack we ran was fixed; an attacker who knows our rules is the next test" (Rui).** Four rows with a "Next:" each (adaptive attackers, copied links, CaMeL, SETA); chess photo = an opponent who adapts.
+
+**16. "Check every action in code, and measure what it costs" (Rui).** Three takeaways with icons, padlock photo, repository link. Thank you.
+
+Backup slides 17–30: sandbox settings, how D1h decides, exposure, where attacks get in, failure analysis, cost, safety, the demo as a table, how one run works, how the LLMail attacks were chosen, test settings, the AgentDojo trial, link tasks by kind, image credits.
 
 ---
 
@@ -133,5 +144,5 @@ If either check says no, the action is blocked. The AI gets a neutral "not permi
 
 ## 6. If something goes wrong on the day
 
-- **Video does not play:** go to slide 7 (the same demo as a screenshot), or open `Trace_and_Gate_demo_backup.mp4` from the desktop.
+- **Video does not play:** go to slide 7 (the same demo as a screenshot) or backup slide 24 (as a table), or open `Trace_and_Gate_demo_backup.mp4` from the desktop.
 - **Asked about a backup topic:** the backup slides start at 17: sandbox settings (17), how D1h decides (18), exposure and attempts (19), where attacks get in (20), failure analysis (21), cost per episode (22), safety and ethics (23), the demo as a table (24), how a test run works (25), how the LLMail attacks were chosen (26).
